@@ -1,0 +1,17 @@
+# WordPress主题开发相关
+.DS_Store
+Thumbs.db
+*.log
+
+# 编辑器相关
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 临时文件
+*~
+*.tmp
+
+# 系统文件
+desktop.ini 

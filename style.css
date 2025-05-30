@@ -3,7 +3,7 @@ Theme Name: PureAura
 Theme URI: https://github.com/cottboy/PureAura
 Description: 一个简洁的博客主题，开源地址：https://github.com/cottboy/PureAura
 Author: cottboy
-Version: 1.0
+Version: 1.0.1
 License: GNU General Public License v3 or later
 Text Domain: pureaura
 */
@@ -382,6 +382,12 @@ img {
     margin: 0 0 0.8rem;
     font-size: 1.6rem;
     line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .entry-title a {
@@ -430,15 +436,18 @@ img {
 .entry-summary {
     color: var(--text-color);
     line-height: 1.6;
-    margin-top: 1rem;
+    margin-top: 0.4rem;
     font-size: 0.95rem;
     flex-grow: 1;
-    display: -webkit-box;
-    -webkit-line-clamp: 6;
-    line-clamp: 6;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 4 !important;
+    line-clamp: 4 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-height: calc(1.6em * 4) !important; /* 修改最大高度为4行 */
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 /* 分页 */
@@ -820,6 +829,12 @@ img {
 .single-post .entry-title {
     font-size: 2.2rem;
     margin-bottom: 1rem;
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    -webkit-box-orient: unset;
+    overflow: visible;
+    text-overflow: unset;
 }
 
 .single-post .entry-meta {
@@ -1230,6 +1245,19 @@ img {
         flex: none;
     }
     
+    /* 移动端文章摘要优化 */
+    .entry-summary {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-top: 0.3rem;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 4 !important;
+        line-clamp: 4 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    
     .menu-toggle {
         display: block;
         z-index: 101;
@@ -1437,6 +1465,7 @@ img {
     transition: all 0.3s ease;
     box-shadow: var(--card-shadow);
     margin-bottom: 0; /* 移除底部边距，因为已经在链接上设置了 */
+    height: 80px; /* 设置固定高度，与缩略图高度一致 */
 }
 
 /* 移除卡片自身的悬停效果，因为已经在链接上设置了 */
@@ -1491,17 +1520,29 @@ img {
 }
 
 .mini-post-content {
-    padding: 10px;
+    padding: 6px 10px; /* 进一步减少上下内边距 */
     flex: 1;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start; /* 改为从顶部开始排列 */
+    overflow: hidden; /* 防止内容溢出 */
+    gap: 6px; /* 增加标题和时间之间的间距 */
 }
 
 .mini-post-title {
     font-size: 0.9rem;
-    margin: 0 0 5px 0;
-    line-height: 1.3;
+    margin: 0; /* 移除所有边距 */
+    line-height: 1.2; /* 减少行高以节省空间 */
     cursor: pointer;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-height: calc(1.2em * 2) !important; /* 设置最大高度为两行 */
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 /* 由于我们已经将整个卡片变成链接，这些样式可能不再需要，但为了兼容性保留并修改 */
@@ -1509,12 +1550,17 @@ img {
     color: var(--text-color);
     text-decoration: none;
     transition: color 0.3s ease;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     cursor: pointer;
+    max-height: calc(1.2em * 2) !important; /* 设置最大高度为两行 */
+    word-wrap: break-word;
+    word-break: break-word;
+    line-height: 1.2;
 }
 
 .mini-post-title a:hover {
@@ -1524,6 +1570,9 @@ img {
 .mini-post-meta {
     font-size: 0.75rem;
     color: var(--dark-gray);
+    margin: 0; /* 移除边距 */
+    line-height: 1.2; /* 设置合适的行高 */
+    flex-shrink: 0; /* 防止被压缩 */
 }
 
 /* 删除旧的热门文章列表样式 */
@@ -2534,5 +2583,48 @@ body.admin-bar .site-header {
     .mobile-statements .site-statement a:hover {
         color: var(--accent-color);
         text-decoration: none;
+    }
+} 
+
+@media (max-width: 576px) {
+    .pagination {
+        gap: 5px;
+    }
+    
+    .pagination .page-numbers {
+        min-width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+    
+    .pagination .prev,
+    .pagination .next {
+        padding: 0 10px;
+    }
+    
+    /* 小屏幕设备文章摘要进一步优化 */
+    .entry-summary {
+        font-size: 0.95rem;
+        line-height: 1.4;
+        margin-top: 0.2rem;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 4 !important;
+        line-clamp: 4 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    
+    /* 小屏幕设备文章标题优化 */
+    .entry-title {
+        font-size: 1.4rem;
+        line-height: 1.3;
+        margin-bottom: 0.6rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 } 

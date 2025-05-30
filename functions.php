@@ -121,9 +121,9 @@ function blog_scripts() {
 }
 add_action('wp_enqueue_scripts', 'blog_scripts');
 
-// 自定义摘要长度
+// 自定义摘要长度 - 移除字数限制，让CSS的line-clamp控制显示
 function blog_excerpt_length($length) {
-    return 100;
+    return 999; // 设置一个很大的数值，让CSS的line-clamp来控制显示行数
 }
 add_filter('excerpt_length', 'blog_excerpt_length');
 

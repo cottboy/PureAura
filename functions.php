@@ -2611,3 +2611,68 @@ function blog_darken_color($hex, $percent) {
     
     return sprintf('#%02x%02x%02x', $r, $g, $b);
 } 
+
+/**
+ * 主题切换时清理数据
+ * 当用户切换到其他主题时执行清理
+ */
+function blog_theme_cleanup() {
+    // 清理主题设置选项
+    $theme_options = array(
+        // 海报设置
+        'blog_poster_images',
+        'blog_poster_links', 
+        'blog_poster_new_tabs',
+        'blog_poster_nofollows',
+        
+        // Logo设置
+        'blog_custom_logo_url',
+        'blog_custom_logo_alt',
+        
+        // 介绍模块设置
+        'blog_intro_image_url',
+        'blog_intro_name',
+        'blog_intro_description',
+        
+        // 建站时间设置
+        'blog_establishment_year',
+        'blog_establishment_month',
+        'blog_establishment_day',
+        'blog_establishment_hour',
+        'blog_establishment_minute',
+        'blog_show_runtime',
+        
+        // CC协议设置
+        'blog_cc_enabled',
+        'blog_cc_type',
+        'blog_cc_show_icon',
+        
+        // 声明设置
+        'blog_show_wordpress_statement',
+        'blog_wordpress_statement_position',
+        'blog_show_theme_statement',
+        'blog_theme_statement_position',
+        
+        // 主题色设置
+        'blog_primary_color',
+        
+        // 搜索限制设置
+        'blog_search_limit_per_minute',
+        'blog_search_limit_per_day',
+    );
+    
+    foreach ($theme_options as $option) {
+        delete_option($option);
+    }
+    
+    // 清理缓存
+    if (function_exists('wp_cache_flush')) {
+        wp_cache_flush();
+    }
+    
+    // 记录清理日志
+    error_log('PureAura theme data cleaned up on theme switch.');
+}
+
+// 当切换到其他主题时执行清理
+add_action('switch_theme', 'blog_theme_cleanup');

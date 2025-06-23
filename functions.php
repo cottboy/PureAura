@@ -932,6 +932,16 @@ function blog_theme_settings_menu() {
         'blog-search-limit-settings', // 菜单slug
         'blog_search_limit_settings_page' // 回调函数
     );
+    
+    // 添加特色图片设置子菜单
+    add_submenu_page(
+        'blog-poster-settings',       // 父菜单slug
+        __('特色图片设置', 'blog'),   // 页面标题
+        __('特色图片', 'blog'),       // 菜单标题
+        'manage_options',             // 权限
+        'blog-featured-image-settings', // 菜单slug
+        'blog_featured_image_settings_page' // 回调函数
+    );
 }
 add_action('admin_menu', 'blog_theme_settings_menu');
 
@@ -1572,7 +1582,8 @@ function blog_admin_enqueue_scripts($hook) {
         strpos($hook, 'blog-site-info-settings') === false &&
         strpos($hook, 'blog-cc-settings') === false &&
         strpos($hook, 'blog-theme-color-settings') === false &&
-        strpos($hook, 'blog-search-limit-settings') === false) {
+        strpos($hook, 'blog-search-limit-settings') === false &&
+        strpos($hook, 'blog-featured-image-settings') === false) {
         return;
     }
     
@@ -1678,7 +1689,8 @@ function blog_admin_init() {
          strpos($_GET['page'], 'blog-site-info-settings') !== false ||
          strpos($_GET['page'], 'blog-cc-settings') !== false ||
          strpos($_GET['page'], 'blog-theme-color-settings') !== false ||
-         strpos($_GET['page'], 'blog-search-limit-settings') !== false)) {
+         strpos($_GET['page'], 'blog-search-limit-settings') !== false ||
+         strpos($_GET['page'], 'blog-featured-image-settings') !== false)) {
         
         // 确保媒体库脚本已加载
         add_action('admin_footer', function() {
@@ -2588,6 +2600,62 @@ function blog_search_limit_settings_page() {
 }
 
 /**
+ * 特色图片设置页面
+ */
+function blog_featured_image_settings_page() {
+    // 处理表单提交
+    if (isset($_POST['submit']) && wp_verify_nonce($_POST['blog_featured_image_nonce'], 'blog_featured_image_action')) {
+        $hide_featured_image = isset($_POST['blog_hide_featured_image']) ? 1 : 0;
+        update_option('blog_hide_featured_image', $hide_featured_image);
+        
+        echo '<div class="notice notice-success is-dismissible"><p>' . __('设置已保存！', 'blog') . '</p></div>';
+    }
+    
+    // 获取当前设置
+    $hide_featured_image = get_option('blog_hide_featured_image', 0);
+    ?>
+    <div class="wrap">
+        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+        
+        <form method="post" action="">
+            <?php wp_nonce_field('blog_featured_image_action', 'blog_featured_image_nonce'); ?>
+            
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="blog_hide_featured_image"><?php _e('隐藏特色图片', 'blog'); ?></label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox" 
+                                   id="blog_hide_featured_image" 
+                                   name="blog_hide_featured_image" 
+                                   value="1" 
+                                   <?php checked($hide_featured_image, 1); ?> />
+                            <?php _e('隐藏特色图片', 'blog'); ?>
+                        </label>
+                        <p class="description">
+                            <?php _e('启用此选项后，文章和页面顶部将不显示特色图片，但缩略图功能仍然保留用于文章列表等位置。', 'blog'); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            
+            <?php submit_button(); ?>
+        </form>
+
+    </div>
+    <?php
+}
+
+/**
+ * 获取特色图片隐藏设置
+ */
+function blog_should_hide_featured_image() {
+    return get_option('blog_hide_featured_image', 0);
+}
+
+/**
  * 将十六进制颜色转换为RGB值
  */
 function blog_hex_to_rgb($hex) {
@@ -2672,6 +2740,9 @@ function blog_theme_cleanup() {
         // 搜索限制设置
         'blog_search_limit_per_minute',
         'blog_search_limit_per_day',
+        
+        // 特色图片设置
+        'blog_hide_featured_image',
     );
     
     foreach ($theme_options as $option) {

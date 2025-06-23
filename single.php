@@ -30,7 +30,7 @@
                         </div>
                     </header>
 
-                    <?php if (has_post_thumbnail()) : ?>
+                    <?php if (has_post_thumbnail() && !blog_should_hide_featured_image()) : ?>
                         <div class="post-thumbnail">
                             <?php the_post_thumbnail('large'); ?>
                         </div>

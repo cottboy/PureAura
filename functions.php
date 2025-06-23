@@ -51,6 +51,19 @@ if (!function_exists('blog_setup')) :
             'caption',
         ));
         
+        // 添加文章形式支持
+        add_theme_support('post-formats', array(
+            'aside',        // 日志
+            'gallery',      // 图片
+            'link',         // 链接
+            'image',        // 图片
+            'quote',        // 引用
+            'status',       // 状态
+            'video',        // 视频
+            'audio',        // 音频
+            'chat'          // 聊天
+        ));
+        
         // 设置评论相关配置
         // 设置评论嵌套深度为较大值，允许无限回复
         update_option('thread_comments_depth', 999);
@@ -2676,3 +2689,63 @@ function blog_theme_cleanup() {
 
 // 当切换到其他主题时执行清理
 add_action('switch_theme', 'blog_theme_cleanup');
+
+// 自定义评论表单字段顺序和布局
+add_filter('comment_form_fields', function($fields) {
+    $author = isset($fields['author']) ? $fields['author'] : '';
+    $email  = isset($fields['email']) ? $fields['email'] : '';
+    $url    = isset($fields['url']) ? $fields['url'] : '';
+    $comment_field = isset($fields['comment']) ? $fields['comment'] : '';
+    $cookies_field = isset($fields['cookies']) ? $fields['cookies'] : '';
+
+    // 修改"显示名称"为"名称"
+    if ($author) {
+        $author = str_replace('显示名称', '名称', $author);
+    }
+
+    // 清空原有字段
+    $fields = array();
+    
+    // 重新组织字段顺序：名称邮箱网站在一行，然后是评论框，最后是cookies复选框
+    $fields['author_email_url'] = '<div class="comment-fields-row">' . $author . $email . $url . '</div>';
+    
+    if ($comment_field) {
+        $fields['comment'] = $comment_field;
+    }
+    
+    if ($cookies_field) {
+        $fields['cookies'] = $cookies_field;
+    }
+
+    return $fields;
+}, 50);
+
+// 添加自定义CSS让输入框横向排列
+add_action('wp_head', function() {
+    echo '<style>
+    .comment-fields-row {
+        display: flex;
+        gap: 10px;
+    }
+    .comment-fields-row p {
+        flex: 1 1 0;
+        margin-bottom: 0;
+    }
+    /* cookies复选框紧凑间距 */
+    .comment-respond .comment-form-cookies-consent {
+        margin-top: 0 !important;
+        margin-bottom: 5px !important;
+        padding: 0 !important;
+    }
+    /* 统一评论表单字体 */
+    .comment-form-comment label {
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        font-size: inherit !important;
+    }
+    /* 禁用评论输入框的resize功能 */
+    .comment-form textarea {
+        resize: none !important;
+    }
+    </style>';
+});

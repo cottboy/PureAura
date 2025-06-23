@@ -886,7 +886,7 @@ img {
 
 .comments-title, .comment-reply-title {
     font-size: 1.3rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     padding-bottom: 0.4rem;
     border-bottom: 2px solid var(--accent-color);
 }
@@ -1067,6 +1067,11 @@ img {
     margin-bottom: 1rem;
     font-family: inherit;
     font-size: 1rem;
+}
+
+/* 单独设置textarea的下边距，避免影响cookies复选框 */
+.comment-form textarea {
+    margin-bottom: 5px;
 }
 
 .comment-form input:focus,
@@ -2204,9 +2209,9 @@ body.page {
 
 /* 文章缩略图在文章页面的位置 */
 .single-post .post-thumbnail {
-    margin: -1.5rem -1.5rem 1.5rem;
+    margin: 1rem -1.5rem 1.5rem;
     height: 400px;
-    border-radius: 6px 6px 0 0; /* 只给顶部添加圆角 */
+    border-radius: 6px; /* 给所有四个角添加圆角 */
 }
 
 /* 移除可能导致空白的上边距 */
@@ -2227,11 +2232,7 @@ body.admin-bar .site-header {
     }
 }
 
-/* 调整Cookie同意选项与提交按钮之间的间距 */
-.comment-form-cookies-consent {
-    margin-bottom: 1rem !important; /* 从1.5rem减少到1rem */
-    padding-top: 0.3rem; /* 与上方元素的间距 */
-}
+
 
 /* 确保提交按钮样式一致 */
 .form-submit {

@@ -149,123 +149,7 @@ add_filter('excerpt_more', 'blog_excerpt_more');
 // 添加编辑器样式支持
 add_editor_style();
 
-// 自定义评论回调函数
-function blog_comment($comment, $args, $depth) {
-    $GLOBALS['comment'] = $comment;
-    
-    // 恢复获取被回复者信息的逻辑
-    $comment_parent = $comment->comment_parent;
-    $is_reply = $comment_parent > 0;
-    $parent_author = '';
-    
-    if ($is_reply) {
-        $parent_comment = get_comment($comment_parent);
-        if ($parent_comment) {
-            $parent_author = $parent_comment->comment_author;
-        }
-    }
-    
-    // $is_reply 的判断已经包含在上面，无需重复
-    // $is_reply = $comment->comment_parent > 0;
-    
-    ?>
-    <li <?php comment_class($is_reply ? 'comment-reply-item' : ''); ?> id="comment-<?php comment_ID(); ?>">
-        <article class="comment">
-            <?php // 新增: 包裹头像、用户名和元数据的 div ?>
-            <div class="comment-header"> 
-                <?php 
-                // 头像现在是 .comment-header 的直接子元素，尺寸调整为53px以匹配CSS
-                echo get_avatar($comment, 53, '', '', array('class' => 'comment-avatar'));
-                ?>
-                <?php // 新增: 包裹用户名和元数据的 div ?>
-                <div class="comment-author-meta-details">
-            <div class="comment-author">
-                        <h4>
-                            <?php 
-                            // 自定义评论作者链接输出，支持新标签页打开和nofollow
-                            $author_name = get_comment_author();
-                            $author_url = get_comment_author_url();
-                            
-                            if (!empty($author_url) && $author_url !== 'http://') {
-                                // 有网站URL时，输出带链接的作者名（新标签页打开，nofollow）
-                                echo '<a href="' . esc_url($author_url) . '" target="_blank" rel="nofollow noopener">' . esc_html($author_name) . '</a>';
-                            } else {
-                                // 没有网站URL时，只输出作者名
-                                echo esc_html($author_name);
-                            }
-                            
-                            // 检测并显示用户角色标志（仅限登录用户）
-                            if ($comment->user_id > 0) {
-                                // 只有当评论者是登录的WordPress用户时才显示角色标志
-                                $user = get_userdata($comment->user_id);
-                                if ($user) {
-                                    $user_roles = $user->roles;
-                                    if (!empty($user_roles)) {
-                                        $role = $user_roles[0]; // 获取主要角色
-                                        $role_badge = '';
-                                        
-                                        switch ($role) {
-                                            case 'administrator':
-                                                $role_badge = '<span class="user-role-badge admin-badge">管理员</span>';
-                                                break;
-                                            case 'editor':
-                                                $role_badge = '<span class="user-role-badge editor-badge">编辑</span>';
-                                                break;
-                                            case 'author':
-                                                $role_badge = '<span class="user-role-badge author-badge">作者</span>';
-                                                break;
-                                            case 'contributor':
-                                                $role_badge = '<span class="user-role-badge contributor-badge">贡献者</span>';
-                                                break;
-                                        }
-                                        
-                                        echo $role_badge;
-                                    }
-                                }
-                            }
-                            ?>
-                            <?php if ($is_reply && $parent_author) : // 如果是回复，在作者名后显示回复对象 ?>
-                                <span class="reply-to-inline">
-                                    回复 <span class="replied-author-name"><?php echo esc_html($parent_author); ?></span>
-                                </span>
-            <?php endif; ?>
-                        </h4>
-            </div>
-            
-            <div class="comment-metadata">
-                <time datetime="<?php comment_time('c'); ?>">
-                            <?php echo get_comment_date(get_option('date_format')); /* 只显示日期，不显示时间 */ ?>
-                </time>
-                <?php edit_comment_link(__('编辑', 'blog'), ' <span class="edit-link">', '</span>'); ?>
-            </div>
-                </div> <?php // 结束 .comment-author-meta-details ?>
-            </div> <?php // 结束 .comment-header ?>
 
-            <div class="comment-content-wrapper">
-                <div class="comment-content">
-                    <?php if ($comment->comment_approved == '0') : ?>
-                        <p><em><?php _e('您的评论正在等待审核。', 'blog'); ?></em></p>
-                    <?php endif; ?>
-                    <?php comment_text(); ?>
-                </div>
-                
-                <div class="reply">
-                    <?php 
-                    // 为所有评论设置相同的回复参数，确保都可以被回复
-                    // 不管在显示中是第几级，逻辑上都视为可以回复
-                    $reply_args = array(
-                        'depth' => 1, // 始终设置为1，这样所有评论都可以被回复
-                        'max_depth' => 999, // 设置一个很大的数值，确保不会因为深度限制而无法回复
-                        'reply_text' => __('回复', 'blog')
-                    );
-                    
-                    comment_reply_link($reply_args); 
-                    ?>
-                </div>
-            </div>
-        </article>
-    <?php
-}
 
 // 自定义分页函数
 function blog_pagination() {
@@ -941,6 +825,16 @@ function blog_theme_settings_menu() {
         'manage_options',             // 权限
         'blog-featured-image-settings', // 菜单slug
         'blog_featured_image_settings_page' // 回调函数
+    );
+    
+    // 添加讨论设置子菜单
+    add_submenu_page(
+        'blog-poster-settings',       // 父菜单slug
+        __('讨论设置', 'blog'),       // 页面标题
+        __('讨论', 'blog'),           // 菜单标题
+        'manage_options',             // 权限
+        'blog-discussion-settings',   // 菜单slug
+        'blog_discussion_settings_page' // 回调函数
     );
 }
 add_action('admin_menu', 'blog_theme_settings_menu');
@@ -2743,6 +2637,9 @@ function blog_theme_cleanup() {
         
         // 特色图片设置
         'blog_hide_featured_image',
+        
+        // 讨论设置
+        'blog_comment_order',
     );
     
     foreach ($theme_options as $option) {
@@ -2768,28 +2665,41 @@ add_filter('comment_form_fields', function($fields) {
     $url    = isset($fields['url']) ? $fields['url'] : '';
     $comment_field = isset($fields['comment']) ? $fields['comment'] : '';
     $cookies_field = isset($fields['cookies']) ? $fields['cookies'] : '';
+    
+    // 保存其他插件添加的字段
+    $other_fields = array();
+    foreach ($fields as $key => $field) {
+        if (!in_array($key, array('author', 'email', 'url', 'comment', 'cookies'))) {
+            $other_fields[$key] = $field;
+        }
+    }
 
     // 修改"显示名称"为"名称"
     if ($author) {
         $author = str_replace('显示名称', '名称', $author);
     }
 
-    // 清空原有字段
-    $fields = array();
+    // 重新组织字段
+    $new_fields = array();
     
-    // 重新组织字段顺序：名称邮箱网站在一行，然后是评论框，最后是cookies复选框
-    $fields['author_email_url'] = '<div class="comment-fields-row">' . $author . $email . $url . '</div>';
+    // 第一行：名称、邮箱、网站
+    $new_fields['author_email_url'] = '<div class="comment-fields-row">' . $author . $email . $url . '</div>';
     
+    // 评论内容框
     if ($comment_field) {
-        $fields['comment'] = $comment_field;
+        $new_fields['comment'] = $comment_field;
     }
     
+    // 添加其他插件的字段（包括Comment Reply Email Notification的邮件订阅复选框）
+    $new_fields = array_merge($new_fields, $other_fields);
+    
+    // cookies复选框放在最后
     if ($cookies_field) {
-        $fields['cookies'] = $cookies_field;
+        $new_fields['cookies'] = $cookies_field;
     }
 
-    return $fields;
-}, 50);
+    return $new_fields;
+}, 999);
 
 // 添加自定义CSS让输入框横向排列
 add_action('wp_head', function() {
@@ -2804,7 +2714,7 @@ add_action('wp_head', function() {
     }
     /* cookies复选框紧凑间距 */
     .comment-respond .comment-form-cookies-consent {
-        margin-top: 0 !important;
+        margin-top: 2px !important;
         margin-bottom: 5px !important;
         padding: 0 !important;
     }
@@ -2820,3 +2730,127 @@ add_action('wp_head', function() {
     }
     </style>';
 });
+
+/**
+ * 讨论设置页面
+ */
+function blog_discussion_settings_page() {
+    // 处理表单提交
+    if (isset($_POST['submit']) && wp_verify_nonce($_POST['blog_discussion_nonce'], 'blog_discussion_action')) {
+        $comment_order = sanitize_text_field($_POST['blog_comment_order']);
+        
+        update_option('blog_comment_order', $comment_order);
+        
+        echo '<div class="notice notice-success is-dismissible"><p>' . __('设置已保存！', 'blog') . '</p></div>';
+    }
+    
+    // 获取当前设置
+    $comment_order = get_option('blog_comment_order', 'desc'); // 默认最新在上
+    ?>
+    <div class="wrap">
+        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+        
+        <form method="post" action="">
+            <?php wp_nonce_field('blog_discussion_action', 'blog_discussion_nonce'); ?>
+            
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="blog_comment_order"><?php _e('评论排序方式', 'blog'); ?></label>
+                    </th>
+                    <td>
+                        <fieldset>
+                            <legend class="screen-reader-text"><?php _e('评论排序方式', 'blog'); ?></legend>
+                            <label>
+                                <input type="radio" 
+                                       name="blog_comment_order" 
+                                       value="desc" 
+                                       <?php checked($comment_order, 'desc'); ?> />
+                                <?php _e('最新评论在上', 'blog'); ?>
+                            </label>
+                            <br>
+                            <label>
+                                <input type="radio" 
+                                       name="blog_comment_order" 
+                                       value="asc" 
+                                       <?php checked($comment_order, 'asc'); ?> />
+                                <?php _e('最早评论在上', 'blog'); ?>
+                            </label>
+                        </fieldset>
+                        <p class="description">
+                            <?php _e('选择评论的显示顺序。排序以原始评论（楼主评论）的发布时间为准，不受回复时间影响。', 'blog'); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            
+            <?php submit_button(); ?>
+        </form>
+
+    </div>
+    <?php
+}
+
+/**
+ * 获取评论排序设置
+ */
+function blog_get_comment_order() {
+    return get_option('blog_comment_order', 'desc');
+}
+
+/**
+ * 自定义评论排序
+ */
+function blog_custom_comment_order($comments, $post_id) {
+    if (empty($comments)) {
+        return $comments;
+    }
+    
+    $comment_order = blog_get_comment_order();
+    
+    // 分离父评论和子评论
+    $top_level_comments = array();
+    $child_comments = array();
+    
+    foreach ($comments as $comment) {
+        if ($comment->comment_parent == 0) {
+            $top_level_comments[] = $comment;
+        } else {
+            $child_comments[] = $comment;
+        }
+    }
+    
+    // 按照设置排序父评论（以原始评论时间为准）
+    usort($top_level_comments, function($a, $b) use ($comment_order) {
+        $time_a = strtotime($a->comment_date);
+        $time_b = strtotime($b->comment_date);
+        
+        if ($comment_order === 'asc') {
+            return $time_a - $time_b; // 最早在上
+        } else {
+            return $time_b - $time_a; // 最新在上
+        }
+    });
+    
+    // 重新组合评论（保持父子关系）
+    $sorted_comments = array();
+    foreach ($top_level_comments as $parent_comment) {
+        $sorted_comments[] = $parent_comment;
+        
+        // 找到该父评论的所有子评论
+        $children = array_filter($child_comments, function($comment) use ($parent_comment) {
+            return $comment->comment_parent == $parent_comment->comment_ID;
+        });
+        
+        // 子评论按时间升序排列（最早回复在上）
+        usort($children, function($a, $b) {
+            return strtotime($a->comment_date) - strtotime($b->comment_date);
+        });
+        
+        foreach ($children as $child) {
+            $sorted_comments[] = $child;
+        }
+    }
+    
+    return $sorted_comments;
+}

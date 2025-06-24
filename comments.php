@@ -35,6 +35,9 @@ if (post_password_required()) {
             'order' => 'ASC'
         ));
         
+        // 应用自定义排序
+        $comments = blog_custom_comment_order($comments, get_the_ID());
+        
         // 组织评论为两级结构
         $comment_structure = blog_organize_comments_two_level($comments);
         

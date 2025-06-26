@@ -40,7 +40,15 @@
                                         $random_posts = get_posts(array(
                                             'numberposts' => 5,
                                             'post_status' => 'publish',
-                                            'orderby' => 'rand'
+                                            'orderby' => 'rand',
+                                            'tax_query' => array(
+                                                array(
+                                                    'taxonomy' => 'post_format',
+                                                    'field' => 'slug',
+                                                    'terms' => array('post-format-status'),
+                                                    'operator' => 'NOT IN'
+                                                )
+                                            )
                                         ));
                                         
                                         foreach ($random_posts as $post) :

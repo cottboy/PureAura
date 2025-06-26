@@ -13,12 +13,20 @@
         <h2 class="widget-title">看看这些</h2>
         <div class="popular-posts-grid">
             <?php
-            // 直接查询3篇随机文章
+            // 直接查询3篇随机文章，排除状态文章
             $args = array(
                 'post_type' => 'post',
                 'post_status' => 'publish',
                 'posts_per_page' => 3,
                 'orderby' => 'rand', // 使用随机排序
+                'tax_query' => array(
+                    array(
+                        'taxonomy' => 'post_format',
+                        'field' => 'slug',
+                        'terms' => array('post-format-status'),
+                        'operator' => 'NOT IN'
+                    )
+                )
             );
             
             $random_posts = new WP_Query($args);

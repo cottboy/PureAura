@@ -58,7 +58,7 @@
                                     <?php if ($has_thumbnail) : ?>
                                         <?php the_post_thumbnail('medium'); ?>
                                     <?php elseif ($first_image) : ?>
-                                        <img src="<?php echo $first_image; ?>" alt="<?php the_title_attribute(); ?>">
+                                        <img src="<?php echo esc_url($first_image); ?>" alt="<?php the_title_attribute(); ?>">
                                     <?php else : ?>
                                         <div class="no-thumbnail">
                                             <i class="fas fa-file-alt"></i>

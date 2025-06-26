@@ -443,120 +443,6 @@ function blog_search_by_title_and_content($search, $wp_query) {
 add_filter('posts_search', 'blog_search_by_title_and_content', 10, 2); 
 
 /**
- * 智能分页：状态文章权重计算
- * 3个状态文章 = 1个标准文章的权重
- */
-function blog_weighted_posts_per_page($wp_query) {
-    // 只在前端主查询且非管理员页面执行
-    if (is_admin() || !$wp_query->is_main_query()) {
-        return;
-    }
-    
-    // 只在显示文章列表的页面执行（排除单篇文章、页面、404等）
-    if (is_singular() || is_404() || is_attachment()) {
-        return;
-    }
-    
-    // 获取WordPress设置的每页文章数
-    $posts_per_page = get_option('posts_per_page', 10);
-    
-    // 计算加权后的文章数量
-    // 假设页面中状态文章和标准文章的比例，我们需要获取更多文章来进行筛选
-    // 为了确保有足够的文章，我们获取 3 倍的文章数量
-    $weighted_posts_per_page = $posts_per_page * 3;
-    
-    // 设置查询的文章数量
-    $wp_query->set('posts_per_page', $weighted_posts_per_page);
-    
-    // 保存原始的每页文章数，供后续处理使用
-    $wp_query->set('original_posts_per_page', $posts_per_page);
-}
-add_action('pre_get_posts', 'blog_weighted_posts_per_page', 1);
-
-/**
- * 处理加权分页的文章筛选
- */
-function blog_filter_weighted_posts($posts, $wp_query) {
-    // 只在前端主查询执行
-    if (is_admin() || !$wp_query->is_main_query()) {
-        return $posts;
-    }
-    
-    // 只在显示文章列表的页面执行（排除单篇文章、页面、404等）
-    if (is_singular() || is_404() || is_attachment()) {
-        return $posts;
-    }
-    
-    // 获取原始的每页文章数
-    $original_posts_per_page = $wp_query->get('original_posts_per_page');
-    if (!$original_posts_per_page) {
-        return $posts;
-    }
-    
-    // 如果没有文章，直接返回
-    if (empty($posts)) {
-        return $posts;
-    }
-    
-    // 按权重筛选文章
-    $filtered_posts = array();
-    $weight_count = 0;
-    $target_weight = $original_posts_per_page; // 目标权重
-    
-    foreach ($posts as $post) {
-        $post_format = get_post_format($post->ID);
-        
-        if ($post_format === 'status') {
-            // 状态文章权重为 1/3
-            $weight_count += 1/3;
-        } else {
-            // 标准文章权重为 1
-            $weight_count += 1;
-        }
-        
-        $filtered_posts[] = $post;
-        
-        // 如果达到目标权重，停止添加文章
-        if ($weight_count >= $target_weight) {
-            break;
-        }
-    }
-    
-    return $filtered_posts;
-}
-add_filter('the_posts', 'blog_filter_weighted_posts', 10, 2);
-
-/**
- * 修正加权分页的总页数计算
- */
-function blog_fix_weighted_pagination() {
-    // 只在前端执行
-    if (is_admin()) {
-        return;
-    }
-    
-    // 只在显示文章列表的页面执行（排除单篇文章、页面、404等）
-    if (is_singular() || is_404() || is_attachment()) {
-        return;
-    }
-    
-    // 获取全局查询对象
-    global $wp_query;
-    
-    // 获取原始的每页文章数
-    $original_posts_per_page = $wp_query->get('original_posts_per_page');
-    if (!$original_posts_per_page) {
-        return;
-    }
-    
-    // 重新计算总页数
-    // 这里我们需要基于实际的权重来计算总页数
-    // 为了简化，我们保持原来的分页逻辑，但调整每页显示的文章数
-    $wp_query->set('posts_per_page', $original_posts_per_page);
-}
-add_action('wp', 'blog_fix_weighted_pagination');
-
-/**
  * 自定义文章导航函数，处理无标题文章的情况
  */
 function blog_custom_post_navigation() {
@@ -1696,17 +1582,6 @@ function blog_get_poster_data() {
     
     return $result;
 }
-
-/**
- * 调试函数：显示当前保存的海报数据
- */
-function blog_debug_poster_data() {
-    if (current_user_can('manage_options')) {
-        $poster_data = get_option('blog_poster_data', array());
-        echo '<!-- 海报数据调试信息: ' . print_r($poster_data, true) . ' -->';
-    }
-}
-add_action('wp_head', 'blog_debug_poster_data');
 
 /**
  * 获取主题设置的海报图片（向后兼容）

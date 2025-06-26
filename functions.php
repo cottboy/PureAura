@@ -53,15 +53,7 @@ if (!function_exists('blog_setup')) :
         
         // 添加文章形式支持
         add_theme_support('post-formats', array(
-            'aside',        // 日志
-            'gallery',      // 图片
-            'link',         // 链接
-            'image',        // 图片
-            'quote',        // 引用
-            'status',       // 状态
-            'video',        // 视频
-            'audio',        // 音频
-            'chat'          // 聊天
+            'status'        // 状态
         ));
         
         // 设置评论相关配置
@@ -410,9 +402,9 @@ function blog_safe_search_title() {
 }
 
 /**
- * 修改搜索查询，只搜索文章标题（增强安全版本）
+ * 修改搜索查询，搜索文章标题和内容（支持状态文章）
  */
-function blog_search_by_title_only($search, $wp_query) {
+function blog_search_by_title_and_content($search, $wp_query) {
     if (empty($search)) {
         return $search; // 如果搜索为空，返回原始搜索
     }
@@ -442,12 +434,199 @@ function blog_search_by_title_only($search, $wp_query) {
     // 移除原始的搜索条件
     $search = '';
     
-    // 添加只搜索标题的条件，使用预处理语句防止SQL注入
-    $search .= $wpdb->prepare(" AND (({$wpdb->posts}.post_title LIKE %s))", $search_term);
+    // 添加搜索标题和内容的条件，使用预处理语句防止SQL注入
+    // 这样既能搜索标准文章的标题，也能搜索状态文章的内容
+    $search .= $wpdb->prepare(" AND (({$wpdb->posts}.post_title LIKE %s) OR ({$wpdb->posts}.post_content LIKE %s))", $search_term, $search_term);
     
     return $search;
 }
-add_filter('posts_search', 'blog_search_by_title_only', 10, 2); 
+add_filter('posts_search', 'blog_search_by_title_and_content', 10, 2); 
+
+/**
+ * 智能分页：状态文章权重计算
+ * 3个状态文章 = 1个标准文章的权重
+ */
+function blog_weighted_posts_per_page($wp_query) {
+    // 只在前端主查询且非管理员页面执行
+    if (is_admin() || !$wp_query->is_main_query()) {
+        return;
+    }
+    
+    // 只在显示文章列表的页面执行（排除单篇文章、页面、404等）
+    if (is_singular() || is_404() || is_attachment()) {
+        return;
+    }
+    
+    // 获取WordPress设置的每页文章数
+    $posts_per_page = get_option('posts_per_page', 10);
+    
+    // 计算加权后的文章数量
+    // 假设页面中状态文章和标准文章的比例，我们需要获取更多文章来进行筛选
+    // 为了确保有足够的文章，我们获取 3 倍的文章数量
+    $weighted_posts_per_page = $posts_per_page * 3;
+    
+    // 设置查询的文章数量
+    $wp_query->set('posts_per_page', $weighted_posts_per_page);
+    
+    // 保存原始的每页文章数，供后续处理使用
+    $wp_query->set('original_posts_per_page', $posts_per_page);
+}
+add_action('pre_get_posts', 'blog_weighted_posts_per_page', 1);
+
+/**
+ * 处理加权分页的文章筛选
+ */
+function blog_filter_weighted_posts($posts, $wp_query) {
+    // 只在前端主查询执行
+    if (is_admin() || !$wp_query->is_main_query()) {
+        return $posts;
+    }
+    
+    // 只在显示文章列表的页面执行（排除单篇文章、页面、404等）
+    if (is_singular() || is_404() || is_attachment()) {
+        return $posts;
+    }
+    
+    // 获取原始的每页文章数
+    $original_posts_per_page = $wp_query->get('original_posts_per_page');
+    if (!$original_posts_per_page) {
+        return $posts;
+    }
+    
+    // 如果没有文章，直接返回
+    if (empty($posts)) {
+        return $posts;
+    }
+    
+    // 按权重筛选文章
+    $filtered_posts = array();
+    $weight_count = 0;
+    $target_weight = $original_posts_per_page; // 目标权重
+    
+    foreach ($posts as $post) {
+        $post_format = get_post_format($post->ID);
+        
+        if ($post_format === 'status') {
+            // 状态文章权重为 1/3
+            $weight_count += 1/3;
+        } else {
+            // 标准文章权重为 1
+            $weight_count += 1;
+        }
+        
+        $filtered_posts[] = $post;
+        
+        // 如果达到目标权重，停止添加文章
+        if ($weight_count >= $target_weight) {
+            break;
+        }
+    }
+    
+    return $filtered_posts;
+}
+add_filter('the_posts', 'blog_filter_weighted_posts', 10, 2);
+
+/**
+ * 修正加权分页的总页数计算
+ */
+function blog_fix_weighted_pagination() {
+    // 只在前端执行
+    if (is_admin()) {
+        return;
+    }
+    
+    // 只在显示文章列表的页面执行（排除单篇文章、页面、404等）
+    if (is_singular() || is_404() || is_attachment()) {
+        return;
+    }
+    
+    // 获取全局查询对象
+    global $wp_query;
+    
+    // 获取原始的每页文章数
+    $original_posts_per_page = $wp_query->get('original_posts_per_page');
+    if (!$original_posts_per_page) {
+        return;
+    }
+    
+    // 重新计算总页数
+    // 这里我们需要基于实际的权重来计算总页数
+    // 为了简化，我们保持原来的分页逻辑，但调整每页显示的文章数
+    $wp_query->set('posts_per_page', $original_posts_per_page);
+}
+add_action('wp', 'blog_fix_weighted_pagination');
+
+/**
+ * 自定义文章导航函数，处理无标题文章的情况
+ */
+function blog_custom_post_navigation() {
+    $prev_post = get_previous_post();
+    $next_post = get_next_post();
+    
+    if (!$prev_post && !$next_post) {
+        return;
+    }
+    
+    echo '<nav class="post-navigation" aria-label="文章导航">';
+    echo '<div class="nav-links">';
+    
+    // 上一篇文章
+    if ($prev_post) {
+        $prev_title = get_the_title($prev_post->ID);
+        
+        // 如果标题为空或只包含空白字符，使用文章内容
+        if (empty(trim($prev_title))) {
+            // 移除所有HTML标签和多余的空白字符
+            $prev_content = wp_strip_all_tags($prev_post->post_content);
+            $prev_content = preg_replace('/\s+/', ' ', trim($prev_content));
+            
+            // 截取前999个字符作为标题（CSS会自动限制为2行）
+            if (!empty($prev_content)) {
+                $prev_title = mb_substr($prev_content, 0, 999, 'UTF-8');
+                // 不添加省略号，让CSS的text-overflow处理
+            } else {
+                $prev_title = '上一篇文章';
+            }
+        }
+        
+        echo '<div class="nav-previous">';
+        echo '<a href="' . esc_url(get_permalink($prev_post->ID)) . '" rel="prev">';
+        echo '<span class="nav-subtitle">上一篇:</span> ';
+        echo '<span class="nav-title">' . esc_html($prev_title) . '</span>';
+        echo '</a>';
+        echo '</div>';
+    }
+    
+    // 下一篇文章
+    if ($next_post) {
+        $next_title = get_the_title($next_post->ID);
+        
+        // 如果标题为空或只包含空白字符，使用文章内容
+        if (empty(trim($next_title))) {
+            // 移除所有HTML标签和多余的空白字符
+            $next_content = wp_strip_all_tags($next_post->post_content);
+            $next_content = preg_replace('/\s+/', ' ', trim($next_content));
+            
+            // 截取前999个字符作为标题（CSS会自动限制为2行）
+            if (!empty($next_content)) {
+                $next_title = mb_substr($next_content, 0, 999, 'UTF-8');
+                // 不添加省略号，让CSS的text-overflow处理
+            } else {
+                $next_title = '下一篇文章';
+            }
+        }
+        
+        echo '<div class="nav-next">';
+        echo '<a href="' . esc_url(get_permalink($next_post->ID)) . '" rel="next">';
+        echo '<span class="nav-subtitle">下一篇:</span> ';
+        echo '<span class="nav-title">' . esc_html($next_title) . '</span>';
+        echo '</a>';
+        echo '</div>';
+    }
+    
+    echo '</div>';
+    echo '</nav>';
+}
 
 /**
  * 组织评论为两级嵌套结构

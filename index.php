@@ -9,6 +9,38 @@
                 ?>
                 <div class="posts-grid">
                     <?php while (have_posts()) : the_post(); 
+                        // 检查文章形式
+                        $post_format = get_post_format();
+                        
+                        // 如果是状态形式，使用特殊布局
+                        if ($post_format === 'status') :
+                    ?>
+                        <article id="post-<?php the_ID(); ?>" <?php post_class('post-card status-format fade-in'); ?>>
+                            <div class="status-author">
+                                <div class="status-avatar">
+                                    <?php echo get_avatar(get_the_author_meta('ID'), 40); ?>
+                                </div>
+                                <div class="status-author-name">
+                                    <a href="<?php echo esc_url(get_author_posts_url(get_the_author_meta('ID'))); ?>" class="author-link"><?php the_author(); ?></a>
+                                </div>
+                            </div>
+                            
+                            <div class="status-content">
+                                <a href="<?php the_permalink(); ?>" class="status-content-link">
+                                    <div class="status-text">
+                                        <?php the_content(); ?>
+                                    </div>
+                                </a>
+                            </div>
+                            
+                            <div class="status-date">
+                                <time datetime="<?php echo get_the_date('c'); ?>">
+                                    <?php echo human_time_diff(get_the_time('U'), current_time('timestamp')) . '前'; ?>
+                                </time>
+                            </div>
+                        </article>
+                    <?php else : 
+                        // 标准文章布局
                         // 尝试获取特色图片
                         $has_thumbnail = has_post_thumbnail();
                         $first_image = '';
@@ -76,6 +108,7 @@
                                 </div>
                             </div>
                         </article>
+                    <?php endif; ?>
                     <?php endwhile; ?>
                 </div>
 

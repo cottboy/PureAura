@@ -59,10 +59,7 @@
                 endif;
 
                 // 显示上一篇/下一篇文章导航
-                the_post_navigation(array(
-                    'prev_text' => '<span class="nav-subtitle">' . __('上一篇:', 'blog') . '</span> <span class="nav-title">%title</span>',
-                    'next_text' => '<span class="nav-subtitle">' . __('下一篇:', 'blog') . '</span> <span class="nav-title">%title</span>',
-                ));
+                blog_custom_post_navigation();
                 ?>
 
             <?php endwhile; ?>

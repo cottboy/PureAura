@@ -37,7 +37,7 @@
                             <div class="status-content">
                                 <a href="<?php the_permalink(); ?>" class="status-content-link">
                                     <div class="status-text">
-                                        <?php the_content(); ?>
+                                        <?php echo esc_html(blog_get_status_text_content()); ?>
                                     </div>
                                 </a>
                             </div>

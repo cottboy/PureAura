@@ -3017,6 +3017,16 @@ function blog_get_status_posts_per_page() {
 }
 
 /**
+ * 获取状态文章的纯文本内容（去除所有HTML标签）
+ */
+function blog_get_status_text_content() {
+    $content = get_the_content();
+    $content = wp_strip_all_tags($content);
+    $content = trim($content);
+    return $content;
+}
+
+/**
  * 修改主查询，根据设置决定是否显示状态文章
  */
 function blog_modify_main_query($query) {

@@ -901,6 +901,16 @@ function blog_theme_settings_menu() {
         'blog-discussion-settings',   // 菜单slug
         'blog_discussion_settings_page' // 回调函数
     );
+    
+    // 添加文章形式设置子菜单
+    add_submenu_page(
+        'blog-poster-settings',       // 父菜单slug
+        __('文章形式设置', 'blog'),   // 页面标题
+        __('文章形式', 'blog'),       // 菜单标题
+        'manage_options',             // 权限
+        'blog-post-format-settings',  // 菜单slug
+        'blog_post_format_settings_page' // 回调函数
+    );
 }
 add_action('admin_menu', 'blog_theme_settings_menu');
 
@@ -2694,6 +2704,10 @@ function blog_theme_cleanup() {
         
         // 讨论设置
         'blog_comment_order',
+        
+        // 文章形式设置
+        'blog_show_status_on_homepage',
+        'blog_status_posts_per_page',
     );
     
     foreach ($theme_options as $option) {
@@ -2908,3 +2922,130 @@ function blog_custom_comment_order($comments, $post_id) {
     
     return $sorted_comments;
 }
+
+/**
+ * 文章形式设置页面
+ */
+function blog_post_format_settings_page() {
+    // 处理表单提交
+    if (isset($_POST['submit']) && wp_verify_nonce($_POST['blog_post_format_nonce'], 'blog_post_format_action')) {
+        $show_status_on_homepage = isset($_POST['blog_show_status_on_homepage']) ? 1 : 0;
+        $status_posts_per_page = intval($_POST['blog_status_posts_per_page']);
+        
+        // 验证每页文章数量的合理范围
+        if ($status_posts_per_page < 1) {
+            $status_posts_per_page = 20;
+        } elseif ($status_posts_per_page > 100) {
+            $status_posts_per_page = 100;
+        }
+        
+        update_option('blog_show_status_on_homepage', $show_status_on_homepage);
+        update_option('blog_status_posts_per_page', $status_posts_per_page);
+        
+        echo '<div class="notice notice-success is-dismissible"><p>' . __('设置已保存！', 'blog') . '</p></div>';
+    }
+    
+    // 获取当前设置
+    $show_status_on_homepage = get_option('blog_show_status_on_homepage', 0); // 默认不显示
+    $status_posts_per_page = get_option('blog_status_posts_per_page', 20); // 默认每页20篇
+    ?>
+    <div class="wrap">
+        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+        
+        <form method="post" action="">
+            <?php wp_nonce_field('blog_post_format_action', 'blog_post_format_nonce'); ?>
+            
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label><?php _e('状态文章显示设置', 'blog'); ?></label>
+                    </th>
+                    <td>
+                        <fieldset>
+                            <legend class="screen-reader-text"><?php _e('状态文章显示设置', 'blog'); ?></legend>
+                            <div style="display: flex; align-items: flex-start; gap: 30px; flex-wrap: wrap;">
+                                <div>
+                                    <label for="blog_show_status_on_homepage">
+                                        <input type="checkbox" 
+                                               id="blog_show_status_on_homepage" 
+                                               name="blog_show_status_on_homepage" 
+                                               value="1" 
+                                               <?php checked($show_status_on_homepage, 1); ?> />
+                                        <?php _e('在首页显示状态文章', 'blog'); ?>
+                                    </label>
+                                    <p class="description" style="margin-top: 5px;">
+                                        <?php _e('如果取消勾选，状态文章将只在文章形式归档页面显示，访问地址/type/status', 'blog'); ?>
+                                    </p>
+                                </div>
+                                <div>
+                                    <label for="blog_status_posts_per_page" style="display: block; margin-bottom: 5px;">
+                                        <?php _e('状态文章归档页每页显示文章数', 'blog'); ?>
+                                    </label>
+                                    <input type="number" 
+                                           id="blog_status_posts_per_page" 
+                                           name="blog_status_posts_per_page" 
+                                           value="<?php echo esc_attr($status_posts_per_page); ?>" 
+                                           min="1" 
+                                           max="100" 
+                                           style="width: 80px;" />
+                                    <span style="margin-left: 5px;"><?php _e('篇', 'blog'); ?></span>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </td>
+                </tr>
+            </table>
+            
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <?php
+}
+
+/**
+ * 获取状态文章首页显示设置
+ */
+function blog_should_show_status_on_homepage() {
+    return get_option('blog_show_status_on_homepage', 0);
+}
+
+/**
+ * 获取状态文章归档页每页显示数量
+ */
+function blog_get_status_posts_per_page() {
+    return get_option('blog_status_posts_per_page', 20);
+}
+
+/**
+ * 修改主查询，根据设置决定是否显示状态文章
+ */
+function blog_modify_main_query($query) {
+    // 只在前端的主查询中生效，排除后台
+    if (!is_admin() && $query->is_main_query()) {
+        // 如果设置为不显示状态文章
+        if (!blog_should_show_status_on_homepage()) {
+            // 检查是否是状态文章的归档页面
+            $is_status_archive = false;
+            
+            // 检查是否是文章格式归档页面且格式为status
+            if (is_tax('post_format', 'post-format-status')) {
+                $is_status_archive = true;
+                // 设置状态文章归档页面的每页显示数量
+                $query->set('posts_per_page', blog_get_status_posts_per_page());
+            }
+            
+            // 如果不是状态文章归档页面，则排除状态文章
+            if (!$is_status_archive) {
+                $tax_query = $query->get('tax_query') ?: array();
+                $tax_query[] = array(
+                    'taxonomy' => 'post_format',
+                    'field' => 'slug',
+                    'terms' => array('post-format-status'),
+                    'operator' => 'NOT IN'
+                );
+                $query->set('tax_query', $tax_query);
+            }
+        }
+    }
+}
+add_action('pre_get_posts', 'blog_modify_main_query');

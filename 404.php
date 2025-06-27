@@ -37,19 +37,25 @@
                                     <h3>📝<?php _e('看看这些', 'blog'); ?></h3>
                                     <ul class="rec-list">
                                         <?php
-                                        $random_posts = get_posts(array(
+                                        $args = array(
                                             'numberposts' => 5,
                                             'post_status' => 'publish',
-                                            'orderby' => 'rand',
-                                            'tax_query' => array(
+                                            'orderby' => 'rand'
+                                        );
+                                        
+                                        // 根据设置决定是否排除状态文章
+                                        if (!blog_should_show_status_on_homepage()) {
+                                            $args['tax_query'] = array(
                                                 array(
                                                     'taxonomy' => 'post_format',
                                                     'field' => 'slug',
                                                     'terms' => array('post-format-status'),
                                                     'operator' => 'NOT IN'
                                                 )
-                                            )
-                                        ));
+                                            );
+                                        }
+                                        
+                                        $random_posts = get_posts($args);
                                         
                                         foreach ($random_posts as $post) :
                                         ?>

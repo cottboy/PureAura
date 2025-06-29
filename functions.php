@@ -57,10 +57,7 @@ if (!function_exists('blog_setup')) :
         ));
         
         // 设置评论相关配置
-        // 设置评论嵌套深度为较大值，允许无限回复
-        update_option('thread_comments_depth', 999);
-        
-        // 启用嵌套评论
+        // 启用嵌套评论，使用WordPress默认深度设置
         if (!get_option('thread_comments')) {
             update_option('thread_comments', 1);
         }
@@ -117,11 +114,8 @@ function blog_scripts() {
         
         // 传递评论参数到前端JavaScript
         wp_localize_script('comment-reply', 'commentReplyParams', array(
-            'max_depth' => 999 // 设置最大深度为很大的值，允许无限回复
+            'max_depth' => get_option('thread_comments_depth', 5) // 使用WordPress设置的评论深度
         ));
-        
-        // 加载评论修复脚本 - 暂时禁用以修复嵌套回复问题
-        // wp_enqueue_script('comment-fix', get_template_directory_uri() . '/js/comment-fix.js', array('jquery', 'comment-reply'), '1.0', true);
     }
 }
 add_action('wp_enqueue_scripts', 'blog_scripts');
@@ -514,112 +508,37 @@ function blog_custom_post_navigation() {
     echo '</nav>';
 }
 
-/**
- * 组织评论为两级嵌套结构
- * 将所有深层嵌套的回复都归类到顶级评论下
- */
-function blog_organize_comments_two_level($comments) {
-    $organized = array();
-    $top_level = array();
-    $replies = array();
-    
-    // 先分离顶级评论和回复
-    foreach ($comments as $comment) {
-        if ($comment->comment_parent == 0) {
-            $top_level[] = $comment;
-        } else {
-            // 找到这个回复的最顶级父评论
-            $root_parent = blog_find_root_parent($comment, $comments);
-            if (!isset($replies[$root_parent])) {
-                $replies[$root_parent] = array();
-            }
-            $replies[$root_parent][] = $comment;
-        }
-    }
-    
-    // 组织最终结构
-    foreach ($top_level as $parent_comment) {
-        $parent_id = $parent_comment->comment_ID;
-        $organized[] = array(
-            'comment' => $parent_comment,
-            'replies' => isset($replies[$parent_id]) ? $replies[$parent_id] : array()
-        );
-    }
-    
-    return $organized;
-}
+
+
+
+
+
+
+
+
+
 
 /**
- * 找到评论的根父评论ID
+ * 标准评论显示函数，支持WordPress原生多级嵌套
  */
-function blog_find_root_parent($comment, $all_comments) {
-    $parent_id = $comment->comment_parent;
-    
-    // 如果没有父评论，返回自己的ID
-    if ($parent_id == 0) {
-        return $comment->comment_ID;
-    }
-    
-    // 查找父评论
-    foreach ($all_comments as $potential_parent) {
-        if ($potential_parent->comment_ID == $parent_id) {
-            // 如果父评论还有父评论，继续向上查找
-            if ($potential_parent->comment_parent != 0) {
-                return blog_find_root_parent($potential_parent, $all_comments);
-            } else {
-                // 找到根父评论
-                return $potential_parent->comment_ID;
+function blog_display_standard_comment($comment, $args, $depth) {
+    if ('div' === $args['style']) {
+        $tag       = 'div';
+        $add_below = 'comment';
+    } else {
+        $tag       = 'li';
+        $add_below = 'div-comment';
             }
-        }
-    }
-    
-    return $parent_id;
-}
-
-/**
- * 显示两级嵌套的评论结构
- */
-function blog_display_two_level_comments($comment_structure) {
-    foreach ($comment_structure as $comment_group) {
-        $parent_comment = $comment_group['comment'];
-        $replies = $comment_group['replies'];
-        
-        // 显示父评论
-        blog_display_single_comment($parent_comment, false);
-        
-        // 如果有回复，显示回复列表
-        if (!empty($replies)) {
-            echo '<ul class="children">';
-            foreach ($replies as $reply) {
-                blog_display_single_comment($reply, true);
-            }
-            echo '</ul>';
-        }
-        
-        echo '</li>'; // 关闭父评论的 li 标签
-    }
-}
-
-/**
- * 显示单个评论
- */
-function blog_display_single_comment($comment, $is_reply = false) {
-    $GLOBALS['comment'] = $comment;
-    
-    // 获取直接父评论的作者信息（用于显示回复对象）
-    $parent_author = '';
-    if ($is_reply && $comment->comment_parent > 0) {
-        $parent_comment = get_comment($comment->comment_parent);
-        if ($parent_comment) {
-            $parent_author = $parent_comment->comment_author;
-        }
-    }
     ?>
-    <li <?php comment_class($is_reply ? 'comment-reply-item' : ''); ?> id="comment-<?php comment_ID(); ?>">
+    <<?php echo $tag; ?> <?php comment_class(empty($args['has_children']) ? '' : 'parent'); ?> id="comment-<?php comment_ID(); ?>">
+    <?php if ('div' != $args['style']) : ?>
+        <div id="div-comment-<?php comment_ID(); ?>" class="comment-body">
+    <?php endif; ?>
+    
         <article class="comment">
             <div class="comment-header"> 
                 <?php 
-                echo get_avatar($comment, 53, '', '', array('class' => 'comment-avatar'));
+            echo get_avatar($comment, $args['avatar_size'], '', '', array('class' => 'comment-avatar'));
                 ?>
                 <div class="comment-author-meta-details">
                     <div class="comment-author">
@@ -666,12 +585,18 @@ function blog_display_single_comment($comment, $is_reply = false) {
                                     }
                                 }
                             }
-                            ?>
-                            <?php if ($is_reply && $parent_author) : // 如果是回复，在作者名后显示回复对象 ?>
-                                <span class="reply-to-inline">
-                                    回复 <span class="replied-author-name"><?php echo esc_html($parent_author); ?></span>
-                                </span>
-                            <?php endif; ?>
+                        
+                        // 显示回复信息（如果这是一个回复评论）
+                        if ($comment->comment_parent > 0) {
+                            $parent_comment = get_comment($comment->comment_parent);
+                            if ($parent_comment) {
+                                $parent_author = $parent_comment->comment_author;
+                                echo '<span class="reply-to-inline">';
+                                echo ' 回复 <span class="replied-author-name">' . esc_html($parent_author) . '</span>';
+                                echo '</span>';
+                            }
+                        }
+                        ?>
                         </h4>
                     </div>
                     
@@ -694,63 +619,22 @@ function blog_display_single_comment($comment, $is_reply = false) {
                 
                 <div class="reply">
                     <?php 
-                    // 为所有评论设置相同的回复参数，确保都可以被回复
-                    // 不管在显示中是第几级，逻辑上都视为可以回复
-                    $reply_args = array(
-                        'depth' => 1, // 始终设置为1，这样所有评论都可以被回复
-                        'max_depth' => 999, // 设置一个很大的数值，确保不会因为深度限制而无法回复
+                comment_reply_link(array_merge($args, array(
+                    'add_below' => $add_below,
+                    'depth'     => $depth,
+                    'max_depth' => $args['max_depth'],
                         'reply_text' => __('回复', 'blog')
-                    );
-                    
-                    comment_reply_link($reply_args); 
+                )));
                     ?>
                 </div>
             </div>
         </article>
-    <?php
-    // 注意：如果不是回复（即顶级评论），不在这里关闭 li 标签
-    // li 标签将在 blog_display_two_level_comments 函数中关闭
-    if ($is_reply) {
-        echo '</li>';
-    }
-}
-
-/**
- * 确保新提交的评论遵循两级嵌套规则
- * 如果回复的是第二级评论，将其重新指向第一级父评论
- */
-function blog_force_two_level_comments($commentdata) {
-    if (isset($commentdata['comment_parent']) && $commentdata['comment_parent'] > 0) {
-        $parent_comment = get_comment($commentdata['comment_parent']);
-        
-        if ($parent_comment && $parent_comment->comment_parent > 0) {
-            // 如果父评论也有父评论，说明这是第三级或更深的回复
-            // 将其重新指向最顶级的父评论
-            $root_parent_id = $parent_comment->comment_parent;
-            $root_parent = get_comment($root_parent_id);
-            
-            // 确保找到真正的根父评论
-            while ($root_parent && $root_parent->comment_parent > 0) {
-                $root_parent_id = $root_parent->comment_parent;
-                $root_parent = get_comment($root_parent_id);
-            }
-            
-            $commentdata['comment_parent'] = $root_parent_id;
-        }
-    }
     
-    return $commentdata;
+    <?php if ('div' != $args['style']) : ?>
+        </div>
+    <?php endif; ?>
+    <?php
 }
-add_filter('preprocess_comment', 'blog_force_two_level_comments');
-
-/**
- * 修改评论表单的默认参数，支持无限深度回复
- */
-function blog_comment_form_defaults($defaults) {
-    $defaults['max_depth'] = 999;
-    return $defaults;
-}
-add_filter('comment_form_defaults', 'blog_comment_form_defaults');
 
 /**
  * 禁用WordPress内置的lightbox功能

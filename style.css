@@ -3,7 +3,7 @@ Theme Name: PureAura
 Theme URI: https://github.com/cottboy/PureAura
 Description: 一个简洁的博客主题，开源地址：https://github.com/cottboy/PureAura
 Author: cottboy
-Version: 1.2.0
+Version: 1.3.0
 License: GNU General Public License v3 or later
 Text Domain: pureaura
 */
@@ -1211,6 +1211,41 @@ img {
     background: #388E3C;
 }
 
+/* 嵌套评论样式 - 统一显示为二级评论（垂直对齐但有统一缩进） */
+.comment-list .children {
+    list-style: none;
+    margin: 1.5rem 0 0 3rem; /* 上边距1.5rem，左边距3rem */
+    padding: 0;
+}
+
+/* 嵌套评论项的间距 - 统一垂直距离 */
+.comment-list .children > li {
+    margin-bottom: 1.5rem; /* 统一设置回复评论之间的垂直间距 */
+    padding-bottom: 0;
+}
+
+/* 最后一个回复评论不需要底部边框和间距 */
+.comment-list .children > li:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* 多级嵌套：三级及以上的评论也统一缩进（不再增加额外缩进） */
+.comment-list .children .children {
+    margin-left: 0; /* 不再增加额外缩进，保持统一的2rem缩进 */
+}
+
+/* 移动端适配：减少缩进距离 */
+@media (max-width: 768px) {
+    .comment-list .children {
+        margin-left: 1.5rem; /* 移动端缩进1.5rem */
+    }
+    
+    .comment-list .children .children {
+        margin-left: 0; /* 移动端所有子评论都保持统一缩进 */
+    }
+}
+
 /* 取消回复链接样式 */
 .reply-author {
     font-weight: bold;
@@ -1274,7 +1309,6 @@ img {
     }
 }
 
-/* 在小屏幕上也确保版权信息区域延伸至页面两侧 */
 @media (max-width: 768px) {
     .content-area {
         min-height: 40vh;

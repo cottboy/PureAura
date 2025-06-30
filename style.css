@@ -1168,25 +1168,23 @@ img {
 .comment-form-comment label {
     display: block;
     margin-bottom: 0.5rem;
-    font-weight: 500;
 }
 
-.comment-form input[type="text"],
-.comment-form input[type="email"],
-.comment-form input[type="url"],
+.comment-form input:not([type="submit"]):not([type="checkbox"]):not([type="radio"]),
 .comment-form textarea {
     width: 100%;
     padding: 0.8rem;
     border: 1px solid #ddd;
     border-radius: 4px;
-    margin-bottom: 1rem;
     font-family: inherit;
     font-size: 1rem;
+    margin-bottom: 1rem;
 }
 
-/* 单独设置textarea的下边距，避免影响cookies复选框 */
 .comment-form textarea {
     margin-bottom: 5px;
+    min-height: 120px;
+    resize: vertical;
 }
 
 .comment-form input:focus,

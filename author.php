@@ -77,6 +77,10 @@
                                             <i class="fa fa-calendar"></i>
                                             <?php echo get_the_date(); ?>
                                         </span>
+                                            <span class="post-author">
+                                                <i class="fa fa-user"></i>
+                                                <a href="<?php echo esc_url(get_author_posts_url(get_the_author_meta('ID'))); ?>" class="author-link"><?php the_author(); ?></a>
+                                        </span>
                                         <span class="categories">
                                             <i class="fa fa-folder"></i>
                                             <?php the_category(', '); ?>

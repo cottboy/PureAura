@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const lightbox = document.createElement('div');
     lightbox.className = 'image-lightbox';
     lightbox.innerHTML = `
+        <span class="lightbox-close">&times;</span>
+        <button class="lightbox-prev" aria-label="Previous image">&lsaquo;</button>
+        <button class="lightbox-next" aria-label="Next image">&rsaquo;</button>
         <div class="lightbox-container">
             <img src="" alt="" class="lightbox-image">
         </div>
@@ -31,38 +34,81 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 获取灯箱内的元素
     const lightboxImage = lightbox.querySelector('.lightbox-image');
+    const closeButton = lightbox.querySelector('.lightbox-close');
+    const prevButton = lightbox.querySelector('.lightbox-prev');
+    const nextButton = lightbox.querySelector('.lightbox-next');
+    
+    // 获取并存储所有图片源
+    const contentImages = document.querySelectorAll('.single-post .entry-content img');
+    const imageSources = Array.from(contentImages).map(img => img.src);
+    let currentIndex = 0;
+
+    // 显示指定索引的图片
+    function showImage(index) {
+        if (index < 0 || index >= imageSources.length) {
+            return;
+        }
+        lightboxImage.src = imageSources[index];
+        currentIndex = index;
+
+        // 如果只有一张图片，则隐藏箭头
+        const arrowDisplay = imageSources.length > 1 ? 'block' : 'none';
+        prevButton.style.display = arrowDisplay;
+        nextButton.style.display = arrowDisplay;
+    }
     
     // 为文章中的所有图片添加点击事件
-    const contentImages = document.querySelectorAll('.single-post .entry-content img');
-    contentImages.forEach(img => {
+    contentImages.forEach((img, index) => {
         // 确保图片可点击
         img.style.cursor = 'pointer';
         
         // 点击图片时打开灯箱
         img.addEventListener('click', function(e) {
             e.preventDefault();
-            const imgSrc = this.getAttribute('src');
-            
-            // 设置灯箱图片源
-            lightboxImage.setAttribute('src', imgSrc);
-            
-            // 打开灯箱
+            // 打开灯箱并禁止页面滚动
             lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden'; // 防止滚动
+            document.documentElement.style.overflow = 'hidden';
+            showImage(index);
         });
     });
     
     // 关闭灯箱
     lightbox.addEventListener('click', function(e) {
-        if (e.target === lightbox) {
+        // 当点击的目标不是图片本身时，关闭灯箱
+        if (e.target !== lightboxImage) {
             closeLightbox();
         }
     });
     
-    // 按ESC键关闭灯箱
+    // 阻止箭头点击关闭灯箱
+    nextButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const nextIndex = (currentIndex + 1) % imageSources.length;
+        showImage(nextIndex);
+    });
+
+    prevButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const prevIndex = (currentIndex - 1 + imageSources.length) % imageSources.length;
+        showImage(prevIndex);
+    });
+    
+    // 为关闭按钮添加点击事件
+    closeButton.addEventListener('click', function(e) {
+        e.stopPropagation(); // 同样阻止冒泡
+        closeLightbox();
+    });
+    
+    // 按键导航
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+        if (!lightbox.classList.contains('active')) return;
+
+        if (e.key === 'Escape') {
             closeLightbox();
+        } else if (e.key === 'ArrowRight' && imageSources.length > 1) {
+            nextButton.click();
+        } else if (e.key === 'ArrowLeft' && imageSources.length > 1) {
+            prevButton.click();
         }
     });
     
@@ -81,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        scale = Math.min(Math.max(0.5, scale + delta), 3); // 限制缩放范围在0.5到3倍之间
+        scale = Math.min(Math.max(0.1, scale + delta), 5); // 限制缩放范围在0.1到5倍之间
         
         updateImageTransform();
     });
@@ -149,7 +195,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 关闭灯箱函数
     function closeLightbox() {
         lightbox.classList.remove('active');
-        document.body.style.overflow = '';
+        
+        // 恢复页面滚动
+        document.documentElement.style.overflow = '';
         
         // 重置缩放和位置
         setTimeout(() => {

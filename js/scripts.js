@@ -10,11 +10,12 @@ jQuery(document).ready(function($) {
         $mainNavigation.toggleClass('toggled');
     });
     
-    // 移动端子菜单切换
-    $('.nav-menu .menu-item-has-children > a').click(function(e) {
+    // 移动端子菜单切换，允许同时展开多个
+    $('.nav-menu .menu-item-has-children > a').on('click', function(e) {
         if (window.innerWidth <= 768) {
             e.preventDefault();
-            $(this).parent().toggleClass('active');
+            // 只切换当前点击的父菜单的 'active' 状态，不影响其他菜单
+            $(this).parent('li').toggleClass('active');
         }
     });
     
@@ -34,31 +35,4 @@ jQuery(document).ready(function($) {
     $(window).on('load', function() {
         $('body').addClass('loaded');
     });
-}); 
-
-/* 注释掉重复的原生 JS 菜单切换逻辑
-document.addEventListener('DOMContentLoaded', function() {
-    // 菜单切换功能
-    const menuToggle = document.querySelector('.menu-toggle');
-    const mainNav = document.querySelector('.main-navigation');
-    
-    if (menuToggle && mainNav) {
-        menuToggle.addEventListener('click', function() {
-            this.classList.toggle('active');
-            mainNav.classList.toggle('toggled');
-        });
-        
-        // 子菜单展开/折叠
-        const menuItemsWithChildren = document.querySelectorAll('.menu-item-has-children > a');
-        
-        menuItemsWithChildren.forEach(function(item) {
-            item.addEventListener('click', function(e) {
-                if (window.innerWidth <= 768) {
-                    e.preventDefault();
-                    this.parentNode.classList.toggle('active');
-                }
-            });
-        });
-    }
-}); 
-*/ 
+});

@@ -1582,6 +1582,23 @@ img {
         display: none !important;
     }
     
+    /* 在移动端隐藏桌面端的勾尖，移动端使用不同的箭头指示器 */
+    .nav-menu > li.menu-item-has-children::before {
+        display: none !important;
+    }
+    
+    /* 在移动端禁用桌面端的hover效果，防止与active状态冲突 */
+    .nav-menu li:hover > .sub-menu {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        max-height: 0 !important;
+    }
+    
+    /* 在移动端也禁用勾尖的hover效果 */
+    .nav-menu > li.menu-item-has-children:hover::before {
+        opacity: 0 !important;
+    }
+    
     .nav-menu .sub-menu li {
         border-bottom: 1px solid #f0f0f0;
     }
@@ -1621,11 +1638,11 @@ img {
         /* 无需修改 border 属性 */
     }
     
-    /* 重新添加：当父菜单项激活时显示子菜单 */
-    .nav-menu li.menu-item-has-children.active > .sub-menu {
-        opacity: 1;
-        visibility: visible;
-        max-height: 500px; /* 足够大的值来容纳子菜单项 */
+    /* 重新添加：当父菜单项激活时显示子菜单 - 提高优先级 */
+    .main-navigation .nav-menu li.menu-item-has-children.active > .sub-menu {
+        opacity: 1 !important;
+        visibility: visible !important;
+        max-height: 500px !important; /* 足够大的值来容纳子菜单项 */
     }
 
     /* 文章导航在移动端变成垂直排列 */
@@ -2966,4 +2983,55 @@ body.admin-bar .site-header {
 
 .lightbox-next {
     right: 20px;
+}
+
+.comment-list .children .children {
+    padding-left: 15px;
+}
+
+.reply-author {
+    font-weight: bold;
+    color: #555;
+}
+
+#cancel-comment-reply-link {
+    font-size: 0.9rem;
+    color: #d9534f;
+    text-decoration: none;
+    display: none; /* Hidden by default */
+}
+
+#cancel-comment-reply-link.show {
+    display: inline-block;
+}
+
+#cancel-comment-reply-link:hover {
+    text-decoration: underline;
+}
+
+/* 新增：评论审核提示角标 */
+.comment-body {
+    position: relative; /* 为绝对定位的子元素提供容器 */
+}
+
+.comment-moderation-notice {
+    position: relative; /* 不再绝对定位，让其随 flex 布局自适应 */
+    margin-left: auto;  /* 推到右侧 */
+    margin-top: 10px; /* 向下移动一点 */
+    align-self: flex-start; /* 顶部对齐 */
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.05);
+    cursor: default; /* 保持默认光标 */
+    display: inline-block; /* 保持块状，方便计算宽度 */
+    white-space: nowrap; /* 防止文本换行 */
+}
+
+.copyright-info {
+    padding: 1rem 0;
+    font-size: 0.9rem;
 }

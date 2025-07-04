@@ -607,13 +607,15 @@ function blog_display_standard_comment($comment, $args, $depth) {
                         <?php edit_comment_link(__('编辑', 'blog'), ' <span class="edit-link">', '</span>'); ?>
                     </div>
                 </div>
+                <?php if ($comment->comment_approved == '0') : ?>
+                    <div class="comment-moderation-notice" title="<?php esc_attr_e('您的评论正在等待审核', 'blog'); ?>">
+                        <?php esc_html_e('等待审核', 'blog'); ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div class="comment-content-wrapper">
                 <div class="comment-content">
-                    <?php if ($comment->comment_approved == '0') : ?>
-                        <p><em><?php _e('您的评论正在等待审核。', 'blog'); ?></em></p>
-                    <?php endif; ?>
                     <?php comment_text(); ?>
                 </div>
                 
@@ -2943,3 +2945,233 @@ function blog_modify_main_query($query) {
     }
 }
 add_action('pre_get_posts', 'blog_modify_main_query');
+
+/**
+ * 评论审核提示功能
+ */
+
+// 1. 自定义评论提交后的处理
+function blog_comment_post_redirect($location, $comment) {
+    // 检查评论是否需要审核
+    if ($comment->comment_approved == '0') {
+        // 添加查询参数，标识评论需要审核
+        $location = add_query_arg('comment_pending', '1', $location);
+    } elseif ($comment->comment_approved == '1') {
+        // 评论已通过，添加成功标识
+        $location = add_query_arg('comment_approved', '1', $location);
+    }
+    return $location;
+}
+add_filter('comment_post_redirect', 'blog_comment_post_redirect', 10, 2);
+
+// 2. 在页面头部显示评论状态提示
+function blog_comment_status_notice() {
+    // 检查是否有评论状态参数
+    if (isset($_GET['comment_pending'])) {
+        echo '<div id="comment-pending-notice" class="comment-status-notice pending">
+            <div class="notice-content">
+                <div class="notice-icon">⏳</div>
+                <div class="notice-text">
+                    <strong>评论已提交！</strong><br>
+                    您的评论正在等待审核，请耐心等待。
+                </div>
+                <button type="button" class="notice-dismiss" onclick="blogDismissNotice(this)">×</button>
+            </div>
+        </div>';
+    } elseif (isset($_GET['comment_approved'])) {
+        echo '<div id="comment-approved-notice" class="comment-status-notice approved">
+            <div class="notice-content">
+                <div class="notice-icon">✅</div>
+                <div class="notice-text">
+                    <strong>评论发表成功！</strong><br>
+                    您的评论已成功发表，感谢您的参与！
+                </div>
+                <button type="button" class="notice-dismiss" onclick="blogDismissNotice(this)">×</button>
+            </div>
+        </div>';
+    }
+}
+add_action('wp_footer', 'blog_comment_status_notice');
+
+// 3. 添加评论状态提示的CSS和JavaScript
+function blog_comment_notice_assets() {
+    // 只在单篇文章页面且有评论状态参数时加载
+    if (is_singular() && (isset($_GET['comment_pending']) || isset($_GET['comment_approved']))) {
+        ?>
+        <style>
+        .comment-status-notice {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            max-width: 500px;
+            width: 90%;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideInDown 0.5s ease-out;
+        }
+        
+        .comment-status-notice.pending {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            color: #856404;
+        }
+        
+        .comment-status-notice.approved {
+            background: linear-gradient(135deg, #d1edff 0%, #a7e3ff 100%);
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+        
+        .notice-content {
+            display: flex;
+            align-items: flex-start;
+            padding: 15px 20px;
+            gap: 12px;
+        }
+        
+        .notice-icon {
+            font-size: 24px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        
+        .notice-text {
+            flex-grow: 1;
+            line-height: 1.4;
+        }
+        
+        .notice-text strong {
+            font-size: 16px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .notice-dismiss {
+            background: none;
+            border: none;
+            font-size: 20px;
+            line-height: 1;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .comment-status-notice.pending .notice-dismiss:hover {
+            background-color: rgba(133, 100, 4, 0.1);
+        }
+        
+        .comment-status-notice.approved .notice-dismiss:hover {
+            background-color: rgba(21, 87, 36, 0.1);
+        }
+        
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        @keyframes slideOutUp {
+            from {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-30px);
+            }
+        }
+        
+        .comment-status-notice.dismissing {
+            animation: slideOutUp 0.3s ease-in forwards;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .comment-status-notice {
+                top: 10px;
+                width: 95%;
+                max-width: none;
+            }
+            
+            .notice-content {
+                padding: 12px 15px;
+                gap: 10px;
+            }
+            
+            .notice-icon {
+                font-size: 20px;
+            }
+            
+            .notice-text strong {
+                font-size: 15px;
+            }
+        }
+        </style>
+        
+        <script>
+        function blogDismissNotice(button) {
+            const notice = button.closest('.comment-status-notice');
+            if (notice) {
+                notice.classList.add('dismissing');
+                setTimeout(function() {
+                    notice.remove();
+                    // 移除URL中的查询参数
+                    if (window.history && window.history.replaceState) {
+                        const url = new URL(window.location);
+                        url.searchParams.delete('comment_pending');
+                        url.searchParams.delete('comment_approved');
+                        window.history.replaceState({}, '', url);
+                    }
+                }, 300);
+            }
+        }
+        
+        // 自动消失功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const notices = document.querySelectorAll('.comment-status-notice');
+            notices.forEach(function(notice) {
+                // 审核提示8秒后自动消失，成功提示5秒后自动消失
+                const delay = notice.classList.contains('pending') ? 8000 : 5000;
+                setTimeout(function() {
+                    if (document.body.contains(notice)) {
+                        const dismissButton = notice.querySelector('.notice-dismiss');
+                        if (dismissButton) {
+                            dismissButton.click();
+                        }
+                    }
+                }, delay);
+            });
+        });
+        </script>
+        <?php
+    }
+}
+add_action('wp_head', 'blog_comment_notice_assets');
+
+// 4. AJAX评论提交时的即时提示（如果主题支持AJAX评论）
+function blog_ajax_comment_response($response, $comment) {
+    if ($comment->comment_approved == '0') {
+        $response['message'] = '评论已提交！您的评论正在等待审核，请耐心等待。';
+        $response['status'] = 'pending';
+    } elseif ($comment->comment_approved == '1') {
+        $response['message'] = '评论发表成功！感谢您的参与！';
+        $response['status'] = 'approved';
+    }
+    return $response;
+}
+add_filter('wp_ajax_nopriv_comment_post', 'blog_ajax_comment_response', 10, 2);
+add_filter('wp_ajax_comment_post', 'blog_ajax_comment_response', 10, 2);

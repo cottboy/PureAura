@@ -11,11 +11,39 @@ jQuery(document).ready(function($) {
     });
     
     // 移动端子菜单切换，允许同时展开多个
-    $('.nav-menu .menu-item-has-children > a').on('click', function(e) {
-        if (window.innerWidth <= 768) {
+    var menuClickTimeout;
+    $(document).on('click', '.nav-menu .menu-item-has-children > a', function(e) {
+        // 使用更可靠的移动端检测方法
+        if (window.innerWidth <= 768 || $('.menu-toggle').is(':visible')) {
             e.preventDefault();
-            // 只切换当前点击的父菜单的 'active' 状态，不影响其他菜单
-            $(this).parent('li').toggleClass('active');
+            e.stopPropagation();
+            
+            var $parentLi = $(this).parent('li');
+            var $link = $(this);
+            
+            // 防抖处理：防止快速重复点击
+            if (menuClickTimeout) {
+                clearTimeout(menuClickTimeout);
+            }
+            
+            menuClickTimeout = setTimeout(function() {
+                // 强制切换active状态
+                var wasActive = $parentLi.hasClass('active');
+                
+                if (wasActive) {
+                    $parentLi.removeClass('active');
+                } else {
+                    $parentLi.addClass('active');
+                }
+                
+                // 移动端强制移除hover状态，防止CSS冲突
+                $parentLi.trigger('mouseleave');
+                $parentLi.removeClass('hover');
+                
+                // 强制重绘以确保CSS变化生效
+                $parentLi.get(0).offsetHeight;
+                
+            }, 50); // 50ms防抖延迟
         }
     });
     

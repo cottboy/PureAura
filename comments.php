@@ -28,11 +28,35 @@ if (post_password_required()) {
 
     <ul class="comment-list">
         <?php
-        // 1. 获取当前文章的所有已批准评论
-        $all_comments = get_comments(array(
+        // 1. 获取评论：包括所有已批准的，以及当前用户待审核的
+        $approved_comments = get_comments(array(
             'post_id' => get_the_ID(),
             'status'  => 'approve',
         ));
+
+        // 为当前访客获取他们自己待审核的评论
+        $pending_comments = array();
+        $commenter = wp_get_current_commenter();
+
+        // 检查是否为已登录用户
+        if ( is_user_logged_in() ) {
+            $pending_comments = get_comments( array(
+                'post_id' => get_the_ID(),
+                'status'  => 'hold', // 'hold' 是待审核状态
+                'user_id' => get_current_user_id(),
+            ) );
+        } 
+        // 检查是否为留下过评论的游客（通过cookie）
+        else if ( ! empty( $commenter['comment_author_email'] ) ) {
+            $pending_comments = get_comments( array(
+                'post_id'      => get_the_ID(),
+                'status'       => 'hold',
+                'author_email' => $commenter['comment_author_email'],
+            ) );
+        }
+
+        // 合并评论数组
+        $all_comments = array_merge($approved_comments, $pending_comments);
 
         // 2. 准备两个数组，一个用于顶级评论，一个用于子评论（以父ID为键）
         $top_level_comments = array();

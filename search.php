@@ -123,9 +123,17 @@
 
                 <?php blog_pagination(); ?>
 
-            <?php else : ?>
+            <?php else : 
+                $search_term = esc_html(get_search_query());
+            ?>
                 <header class="page-header">
-                    <h1 class="page-title"><?php _e('搜索结果', 'blog'); ?></h1>
+                    <h1 class="page-title"><?php 
+                        if (!empty($search_term)) {
+                            printf(__('搜索 %s', 'blog'), '<span class="search-term">' . $search_term . '</span>');
+                        } else {
+                            _e('搜索结果', 'blog');
+                        }
+                    ?></h1>
                     <p class="search-result-count">搜索出0条结果</p>
                 </header><!-- .page-header -->
                 <p><?php _e('没有找到与您的搜索条件匹配的文章，请尝试其他关键词。', 'blog'); ?></p>

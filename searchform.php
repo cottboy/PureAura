@@ -3,13 +3,12 @@
  * 自定义搜索表单模板
  */
 
-// 获取当前的搜索词（已经过安全处理）
+// 获取当前的搜索词
 $search_query = '';
 if (is_search()) {
-    $search_query = blog_safe_search_query();
+    $search_query = esc_attr(get_search_query());
 } elseif (isset($_GET['s'])) {
-    $search_query = blog_sanitize_search_input($_GET['s']);
-    $search_query = esc_attr($search_query);
+    $search_query = esc_attr($_GET['s']);
 }
 ?>
 
@@ -22,7 +21,6 @@ if (is_search()) {
         placeholder="<?php echo esc_attr__('搜索内容', 'blog'); ?>" 
         value="<?php echo $search_query; ?>" 
         name="s" 
-        maxlength="200"
         autocomplete="off"
         required
     />

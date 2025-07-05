@@ -932,31 +932,13 @@ img {
     background: var(--accent-color);
 }
 
-/* 搜索安全相关样式 */
+/* 搜索结果高亮样式 */
 .search-term {
     color: var(--accent-color);
     font-weight: 600;
     background: rgba(76, 175, 80, 0.1);
     padding: 0.2rem 0.4rem;
     border-radius: 3px;
-}
-
-/* 搜索表单安全提示 */
-.search-form {
-    position: relative;
-}
-
-.search-field[maxlength]:focus::after {
-    content: attr(maxlength);
-    position: absolute;
-    top: -20px;
-    right: 0;
-    font-size: 0.7rem;
-    color: var(--dark-gray);
-    background: white;
-    padding: 2px 5px;
-    border-radius: 3px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 /* 无障碍访问支持 */

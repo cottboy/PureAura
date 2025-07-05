@@ -89,9 +89,6 @@ function blog_scripts() {
         wp_enqueue_script('comment-reply');
     }
     
-    // 搜索安全脚本
-    wp_enqueue_script('blog-search-security', get_template_directory_uri() . '/js/search-security.js', array(), '1.0.0', true);
-    
     wp_enqueue_script('blog-scripts', get_template_directory_uri() . '/js/scripts.js', array('jquery'), '1.0', true);
     
     // 加载海报轮播脚本
@@ -241,200 +238,6 @@ function blog_menu_item_classes($classes, $item, $args) {
 }
 add_filter('nav_menu_css_class', 'blog_menu_item_classes', 10, 3);
 
-/**
- * 搜索处理 - 防止XSS和SQL注入
- */
-
-// 1. 搜索输入过滤和验证
-function blog_sanitize_search_input($search_term) {
-    // 移除HTML标签
-    $search_term = strip_tags($search_term);
-    
-    // 移除多余的空白字符
-    $search_term = trim($search_term);
-    
-    // 限制搜索词长度，防止过长的搜索词（按实际字符数计算，支持中英文）
-    $max_length = 200; // 200个字符（无论中文还是英文都按字符数计算）
-    if (mb_strlen($search_term, 'UTF-8') > $max_length) {
-        $search_term = mb_substr($search_term, 0, $max_length, 'UTF-8');
-    }
-    
-    // 移除潜在的恶意字符
-    $search_term = preg_replace('/[<>"\']/', '', $search_term);
-    
-    // 移除SQL注入相关的关键词
-    $dangerous_patterns = array(
-        '/\bunion\b/i',
-        '/\bselect\b/i',
-        '/\binsert\b/i',
-        '/\bupdate\b/i',
-        '/\bdelete\b/i',
-        '/\bdrop\b/i',
-        '/\balter\b/i',
-        '/\bexec\b/i',
-        '/\bscript\b/i',
-        '/\balert\b/i',
-        '/javascript:/i',
-        '/vbscript:/i',
-        '/data:/i'
-    );
-    
-    foreach ($dangerous_patterns as $pattern) {
-        $search_term = preg_replace($pattern, '', $search_term);
-        }
-    
-    return $search_term;
-}
-
-// 2. 搜索频率限制（防止暴力搜索）
-function blog_check_search_rate_limit() {
-    $ip = $_SERVER['REMOTE_ADDR'];
-    $current_time = time();
-    
-    // 从后台设置获取搜索限制
-    $search_limit_minute = get_option('blog_search_limit_minute', 10); // 默认每分钟10次
-    $search_limit_daily = get_option('blog_search_limit_daily', 300);   // 默认每天300次
-    $time_window_minute = 60; // 时间窗口60秒
-    $time_window_daily = 24 * 60 * 60; // 时间窗口24小时
-    
-    // 获取IP的每分钟搜索记录
-    $search_log_minute = get_transient('search_log_minute_' . md5($ip));
-    if (!$search_log_minute) {
-        $search_log_minute = array();
-    }
-
-    // 获取IP的每日搜索记录
-    $search_log_daily = get_transient('search_log_daily_' . md5($ip));
-    if (!$search_log_daily) {
-        $search_log_daily = array();
-    }
-    
-    // 清理过期的每分钟搜索记录
-    $search_log_minute = array_filter($search_log_minute, function($timestamp) use ($current_time, $time_window_minute) {
-        return ($current_time - $timestamp) < $time_window_minute;
-    });
-    
-    // 清理过期的每日搜索记录
-    $search_log_daily = array_filter($search_log_daily, function($timestamp) use ($current_time, $time_window_daily) {
-        return ($current_time - $timestamp) < $time_window_daily;
-    });
-    
-    // 检查是否超过每分钟限制
-    if (count($search_log_minute) >= $search_limit_minute) {
-        return false; // 超过每分钟限制
-    }
-    
-    // 检查是否超过每日限制
-    if (count($search_log_daily) >= $search_limit_daily) {
-        return false; // 超过每日限制
-    }
-    
-    // 记录当前搜索
-    $search_log_minute[] = $current_time;
-    $search_log_daily[] = $current_time;
-
-    // 更新缓存
-    set_transient('search_log_minute_' . md5($ip), $search_log_minute, $time_window_minute);
-    set_transient('search_log_daily_' . md5($ip), $search_log_daily, $time_window_daily);
-    
-    return true; // 允许搜索
-}
-
-// 3. 处理搜索请求
-function blog_secure_search_handler($wp_query) {
-    // 只在前端搜索时执行
-    if (is_admin() || !$wp_query->is_main_query() || !is_search()) {
-        return;
-    }
-
-    // 检查是否有搜索词
-    if (!isset($_GET['s']) || empty($_GET['s'])) {
-        return;
-    }
-    
-
-    
-    // 验证搜索频率限制
-    if (!blog_check_search_rate_limit()) {
-        wp_die(__('搜索过于频繁，请稍后再试。', 'blog'), __('搜索限制', 'blog'), array('response' => 429));
-        return;
-    }
-
-    // 清理和验证搜索词
-    $search_term = blog_sanitize_search_input($_GET['s']);
-    
-    // 如果搜索词为空，不进行任何处理（应该不会发生，因为前端已阻止）
-    if (empty($search_term)) {
-        return;
-    }
-    
-    // 更新查询变量
-    $wp_query->set('s', $search_term);
-}
-add_action('pre_get_posts', 'blog_secure_search_handler', 5);
-
-// 4. 安全输出搜索词（防止XSS）
-function blog_safe_search_query() {
-    $search_query = get_search_query();
-    
-    // 双重转义确保安全
-    $search_query = esc_html($search_query);
-    $search_query = esc_attr($search_query);
-    
-    return $search_query;
-}
-
-// 5. 搜索结果标题安全输出
-function blog_safe_search_title() {
-    $search_query = blog_safe_search_query();
-    
-    if (!empty($search_query)) {
-        return sprintf(__('搜索 %s', 'blog'), '<span class="search-term">' . $search_query . '</span>');
-    }
-    
-    return __('搜索结果', 'blog');
-}
-
-/**
- * 修改搜索查询，搜索文章标题和内容（支持状态文章）
- */
-function blog_search_by_title_and_content($search, $wp_query) {
-    if (empty($search)) {
-        return $search; // 如果搜索为空，返回原始搜索
-    }
-    
-    global $wpdb;
-    
-    // 确保这是一个搜索查询
-    if (!isset($wp_query->query_vars['s'])) {
-        return $search;
-    }
-    
-    // 获取搜索词并进行安全处理
-    $search_term = $wp_query->query_vars['s'];
-    
-    // 使用新的安全处理函数
-    $search_term = blog_sanitize_search_input($search_term);
-    
-    // 如果搜索词为空，返回原始搜索让WordPress自然处理
-    if (empty($search_term)) {
-        return $search;
-    }
-    
-    // 使用WordPress的安全函数进行SQL转义
-    $search_term = $wpdb->esc_like($search_term);
-    $search_term = '%' . $search_term . '%';
-    
-    // 移除原始的搜索条件
-    $search = '';
-    
-    // 添加搜索标题和内容的条件，使用预处理语句防止SQL注入
-    // 这样既能搜索标准文章的标题，也能搜索状态文章的内容
-    $search .= $wpdb->prepare(" AND (({$wpdb->posts}.post_title LIKE %s) OR ({$wpdb->posts}.post_content LIKE %s))", $search_term, $search_term);
-    
-    return $search;
-}
-add_filter('posts_search', 'blog_search_by_title_and_content', 10, 2); 
 
 /**
  * 自定义文章导航函数，处理无标题文章的情况
@@ -758,15 +561,7 @@ function blog_theme_settings_menu() {
         'blog_theme_color_settings_page' // 回调函数
     );
     
-    // 添加搜索限制子菜单
-    add_submenu_page(
-        'blog-poster-settings',       // 父菜单slug
-        __('搜索限制设置', 'blog'),   // 页面标题
-        __('搜索限制', 'blog'),       // 菜单标题
-        'manage_options',             // 权限
-        'blog-search-limit-settings', // 菜单slug
-        'blog_search_limit_settings_page' // 回调函数
-    );
+
     
     // 添加特色图片设置子菜单
     add_submenu_page(
@@ -1429,7 +1224,7 @@ function blog_intro_settings_page() {
  * 在管理后台加载媒体库脚本
  */
 function blog_admin_enqueue_scripts($hook) {
-    // 支持海报设置、Logo设置、介绍设置、站点信息设置、CC设置、主题色设置和搜索限制设置页面
+    // 支持海报设置、Logo设置、介绍设置、站点信息设置、CC设置和主题色设置页面
     // 检查当前页面是否为我们的设置页面
     if (strpos($hook, 'blog-poster-settings') === false && 
         strpos($hook, 'blog-logo-settings') === false &&
@@ -1437,7 +1232,7 @@ function blog_admin_enqueue_scripts($hook) {
         strpos($hook, 'blog-site-info-settings') === false &&
         strpos($hook, 'blog-cc-settings') === false &&
         strpos($hook, 'blog-theme-color-settings') === false &&
-        strpos($hook, 'blog-search-limit-settings') === false &&
+
         strpos($hook, 'blog-featured-image-settings') === false) {
         return;
     }
@@ -1533,7 +1328,7 @@ function blog_admin_init() {
          strpos($_GET['page'], 'blog-site-info-settings') !== false ||
          strpos($_GET['page'], 'blog-cc-settings') !== false ||
          strpos($_GET['page'], 'blog-theme-color-settings') !== false ||
-         strpos($_GET['page'], 'blog-search-limit-settings') !== false ||
+
          strpos($_GET['page'], 'blog-featured-image-settings') !== false)) {
         
         // 确保媒体库脚本已加载
@@ -2365,83 +2160,7 @@ function blog_output_custom_theme_color() {
 }
 add_action('wp_head', 'blog_output_custom_theme_color');
 
-/**
- * 搜索限制设置页面
- */
-function blog_search_limit_settings_page() {
-    // 处理表单提交
-    if (isset($_POST['submit']) && wp_verify_nonce($_POST['blog_search_limit_nonce'], 'blog_search_limit_action')) {
-        $search_limit_minute = intval($_POST['blog_search_limit_minute']);
-        $search_limit_daily = intval($_POST['blog_search_limit_daily']);
-        
-        // 验证输入值
-        if ($search_limit_minute < 1 || $search_limit_minute > 100) {
-            echo '<div class="notice notice-error is-dismissible"><p>' . __('每分钟搜索次数必须在1-100之间！', 'blog') . '</p></div>';
-        } elseif ($search_limit_daily < 10 || $search_limit_daily > 10000) {
-            echo '<div class="notice notice-error is-dismissible"><p>' . __('每日搜索次数必须在10-10000之间！', 'blog') . '</p></div>';
-        } else {
-            update_option('blog_search_limit_minute', $search_limit_minute);
-            update_option('blog_search_limit_daily', $search_limit_daily);
-            echo '<div class="notice notice-success is-dismissible"><p>' . __('搜索限制设置已保存！', 'blog') . '</p></div>';
-        }
-    }
-    
-    // 获取当前设置
-    $search_limit_minute = get_option('blog_search_limit_minute', 10); // 默认每分钟10次
-    $search_limit_daily = get_option('blog_search_limit_daily', 300);   // 默认每天300次
-    ?>
-    <div class="wrap">
-        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-        
-        <form method="post" action="">
-            <?php wp_nonce_field('blog_search_limit_action', 'blog_search_limit_nonce'); ?>
-            
-            <table class="form-table">
-                <tr>
-                    <th scope="row">
-                        <label for="blog_search_limit_minute"><?php _e('每分钟搜索限制', 'blog'); ?></label>
-                    </th>
-                    <td>
-                        <input type="number" 
-                               id="blog_search_limit_minute" 
-                               name="blog_search_limit_minute" 
-                               value="<?php echo esc_attr($search_limit_minute); ?>" 
-                               min="1" 
-                               max="100" 
-                               class="small-text" />
-                        <span><?php _e('次', 'blog'); ?></span>
-                        <p class="description">
-                            <?php _e('设置每个IP地址每分钟最多可以搜索的次数。建议值：5-20次。', 'blog'); ?>
-                        </p>
-                    </td>
-                </tr>
-                
-                <tr>
-                    <th scope="row">
-                        <label for="blog_search_limit_daily"><?php _e('每日搜索限制', 'blog'); ?></label>
-                    </th>
-                    <td>
-                        <input type="number" 
-                               id="blog_search_limit_daily" 
-                               name="blog_search_limit_daily" 
-                               value="<?php echo esc_attr($search_limit_daily); ?>" 
-                               min="10" 
-                               max="10000" 
-                               class="small-text" />
-                        <span><?php _e('次', 'blog'); ?></span>
-                        <p class="description">
-                            <?php _e('设置每个IP地址每天最多可以搜索的次数。建议值：100-1000次。', 'blog'); ?>
-                        </p>
-                    </td>
-                </tr>
-            </table>
-            
-            <?php submit_button(); ?>
-        </form>
 
-    </div>
-    <?php
-}
 
 /**
  * 特色图片设置页面
@@ -2537,80 +2256,6 @@ function blog_darken_color($hex, $percent) {
     return sprintf('#%02x%02x%02x', $r, $g, $b);
 } 
 
-/**
- * 主题切换时清理数据
- * 当用户切换到其他主题时执行清理
- */
-function blog_theme_cleanup() {
-    // 清理主题设置选项
-    $theme_options = array(
-        // 海报设置
-        'blog_poster_images',
-        'blog_poster_links', 
-        'blog_poster_new_tabs',
-        'blog_poster_nofollows',
-        
-        // Logo设置
-        'blog_custom_logo_url',
-        'blog_custom_logo_alt',
-        
-        // 介绍模块设置
-        'blog_intro_image_url',
-        'blog_intro_name',
-        'blog_intro_description',
-        
-        // 建站时间设置
-        'blog_establishment_year',
-        'blog_establishment_month',
-        'blog_establishment_day',
-        'blog_establishment_hour',
-        'blog_establishment_minute',
-        'blog_show_runtime',
-        
-        // CC协议设置
-        'blog_cc_enabled',
-        'blog_cc_type',
-        'blog_cc_show_icon',
-        
-        // 声明设置
-        'blog_show_wordpress_statement',
-        'blog_wordpress_statement_position',
-        'blog_show_theme_statement',
-        'blog_theme_statement_position',
-        
-        // 主题色设置
-        'blog_primary_color',
-        
-        // 搜索限制设置
-        'blog_search_limit_per_minute',
-        'blog_search_limit_per_day',
-        
-        // 特色图片设置
-        'blog_hide_featured_image',
-        
-        // 讨论设置
-        'blog_comment_order',
-        
-        // 文章形式设置
-        'blog_show_status_on_homepage',
-        'blog_status_posts_per_page',
-    );
-    
-    foreach ($theme_options as $option) {
-        delete_option($option);
-    }
-    
-    // 清理缓存
-    if (function_exists('wp_cache_flush')) {
-        wp_cache_flush();
-    }
-    
-    // 记录清理日志
-    error_log('PureAura theme data cleaned up on theme switch.');
-}
-
-// 当切换到其他主题时执行清理
-add_action('switch_theme', 'blog_theme_cleanup');
 
 // 自定义评论表单字段顺序和布局
 add_filter('comment_form_fields', function($fields) {

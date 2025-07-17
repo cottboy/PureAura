@@ -153,12 +153,6 @@ if (post_password_required()) {
         ?>
     </ul>
 
-    <?php
-    the_comments_pagination(array(
-        'prev_text' => '<span class="screen-reader-text">' . __('上一页', 'blog') . '</span>',
-        'next_text' => '<span class="screen-reader-text">' . __('下一页', 'blog') . '</span>',
-    ));
-    ?>
 </div><!-- #comments -->
 <?php endif; ?>
 

@@ -1,0 +1,42 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/theme.json",
+	"version": 2,
+	"settings": {
+		"appearanceTools": true,
+		"layout": {
+			"contentSize": "720px",
+			"wideSize": "1100px"
+		},
+		"color": {
+			"defaultPalette": false,
+			"defaultGradients": false,
+			"palette": [
+				{ "slug": "ink", "name": "墨色", "color": "#14161c" },
+				{ "slug": "ink-soft", "name": "浅墨", "color": "#4c5364" },
+				{ "slug": "muted", "name": "灰", "color": "#767e90" },
+				{ "slug": "paper", "name": "纸白", "color": "#ffffff" },
+				{ "slug": "mist", "name": "雾气", "color": "#e9ecf2" },
+				{ "slug": "accent", "name": "强调色", "color": "#2d5bff" },
+				{ "slug": "ember", "name": "暖光", "color": "#ff9f7a" }
+			]
+		},
+		"typography": {
+			"fluid": true,
+			"fontSizes": [
+				{ "slug": "small", "name": "小", "size": "0.8125rem" },
+				{ "slug": "medium", "name": "正文", "size": "1.0625rem" },
+				{ "slug": "large", "name": "大", "size": "1.25rem" },
+				{ "slug": "x-large", "name": "标题", "size": "1.75rem" },
+				{ "slug": "xx-large", "name": "大标题", "size": "2.5rem" }
+			]
+		},
+		"spacing": {
+			"units": ["px", "rem", "em", "vw", "%"]
+		},
+		"blocks": {
+			"core/quote": {
+				"typography": { "fontSize": "1.0625rem" }
+			}
+		}
+	}
+}

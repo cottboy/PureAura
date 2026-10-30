@@ -51,9 +51,6 @@ function pureaura_sanitize_choice( $allowed ) {
  * @param WP_Customize_Manager $wp_customize 自定义器实例。
  */
 function pureaura_customize_register( $wp_customize ) {
-	$wp_customize->get_setting( 'blogname' )->transport        = 'refresh';
-	$wp_customize->get_setting( 'blogdescription' )->transport = 'refresh';
-
 	/* ---------- 外观与材质 ---------- */
 	$wp_customize->add_section(
 		'pureaura_material',

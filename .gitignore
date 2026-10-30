@@ -1,0 +1,8 @@
+# 本地工作数据（预览页、截图、调试脚本），不随主题发布
+.workbuddy/
+
+# 系统与编辑器杂项
+.DS_Store
+Thumbs.db
+*.log
+node_modules/

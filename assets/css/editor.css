@@ -1,0 +1,122 @@
+/* PureAura 编辑器样式：让后台写作所见接近前台阅读。 */
+
+:root {
+	--pa-ink: #14161c;
+	--pa-ink-2: #4c5364;
+	--pa-ink-3: #767e90;
+	--pa-accent: #2d5bff;
+	--pa-hair: rgba(18, 24, 42, 0.1);
+}
+
+.editor-styles-wrapper {
+	background: #f2f4f8;
+	color: var(--pa-ink);
+	font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+		"HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+	font-size: 18px;
+	line-height: 1.95;
+	letter-spacing: 0.008em;
+}
+
+.editor-styles-wrapper .wp-block {
+	max-width: 720px;
+}
+
+.editor-styles-wrapper .wp-block[data-align="wide"] {
+	max-width: 1100px;
+}
+
+.editor-styles-wrapper .wp-block[data-align="full"] {
+	max-width: none;
+}
+
+.editor-styles-wrapper h1,
+.editor-styles-wrapper h2,
+.editor-styles-wrapper h3,
+.editor-styles-wrapper h4 {
+	font-weight: 600;
+	letter-spacing: -0.026em;
+	line-height: 1.4;
+	color: var(--pa-ink);
+}
+
+.editor-styles-wrapper h2 {
+	font-size: 1.58rem;
+	margin-top: 2.2em;
+}
+
+.editor-styles-wrapper h3 {
+	font-size: 1.27rem;
+	margin-top: 1.9em;
+}
+
+.editor-styles-wrapper a {
+	color: var(--pa-accent);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	text-decoration-thickness: 1px;
+}
+
+.editor-styles-wrapper blockquote {
+	margin: 2em 0;
+	padding: 2px 0 2px 22px;
+	border-left: 1px solid var(--pa-accent);
+	color: var(--pa-ink-2);
+	font-size: 1.02em;
+}
+
+.editor-styles-wrapper code {
+	font-family: ui-monospace, "SF Mono", Consolas, monospace;
+	font-size: 0.86em;
+	padding: 2px 6px;
+	border-radius: 6px;
+	background: rgba(18, 24, 42, 0.06);
+}
+
+.editor-styles-wrapper pre {
+	padding: 20px 22px;
+	border-radius: 14px;
+	background: #151821;
+	color: #e8eaf2;
+	font-size: 0.8em;
+	line-height: 1.78;
+}
+
+.editor-styles-wrapper pre code {
+	background: none;
+	padding: 0;
+	color: inherit;
+}
+
+.editor-styles-wrapper img {
+	border-radius: 14px;
+}
+
+.editor-styles-wrapper hr {
+	border: 0;
+	height: 1px;
+	background: var(--pa-hair);
+	margin: 2.4em 0;
+}
+
+.editor-styles-wrapper table th,
+.editor-styles-wrapper table td {
+	border-bottom: 1px solid var(--pa-hair);
+	padding: 10px 12px;
+}
+
+.editor-styles-wrapper .wp-block-pullquote {
+	border-top: 1px solid var(--pa-hair);
+	border-bottom: 1px solid var(--pa-hair);
+	padding: 22px 0;
+	text-align: left;
+}
+
+.editor-styles-wrapper .wp-block-pullquote p {
+	font-size: 1.32em;
+	line-height: 1.6;
+}
+
+.editor-styles-wrapper .wp-block-button__link {
+	border-radius: 999px;
+}

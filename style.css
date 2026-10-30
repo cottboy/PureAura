@@ -1,0 +1,17 @@
+/*
+Theme Name: PureAura
+Theme URI: https://example.com/pureaura
+Author: PureAura
+Author URI: https://example.com
+Description: 苹果风液态玻璃博客主题。内容不装盒子，玻璃只给控件；自带目录、阅读进度、深浅外观、字号调节与二十余项后台选项。
+Version: 1.0.0
+Requires at least: 6.4
+Tested up to: 6.9
+Requires PHP: 7.4
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: pureaura
+Tags: blog, custom-colors, custom-logo, custom-menu, featured-images, threaded-comments, translation-ready, block-styles, wide-blocks
+*/
+
+/* 主题样式集中在 assets/css/aura.css，本文件仅承载主题标识。 */
